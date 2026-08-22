@@ -5,13 +5,17 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
   <title>ColdChat — Sign in</title>
   <style>
-    *{box-sizing:border-box} body{margin:0;min-height:100vh;display:grid;place-items:center;background:#071018;color:#f5f8ff;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;padding:20px}.card{width:min(420px,100%);background:#0d1822;border:1px solid #213341;border-radius:24px;padding:28px;box-shadow:0 24px 70px #0008}.brand{font-size:28px;font-weight:800;letter-spacing:-.8px;margin-bottom:6px}.sub{color:#9fb2c2;margin-bottom:24px;line-height:1.5}.tabs{display:grid;grid-template-columns:1fr 1fr;background:#08121a;border-radius:14px;padding:4px;margin-bottom:18px}.tabs button{border:0;background:transparent;color:#9fb2c2;padding:11px;border-radius:11px;font-weight:700;cursor:pointer}.tabs button.active{background:#162633;color:#fff}label{display:block;font-size:13px;color:#a9bac8;margin:14px 0 7px}input{width:100%;border:1px solid #29404f;background:#09131b;color:white;border-radius:13px;padding:14px 15px;font-size:16px;outline:none}input:focus{border-color:#74e9ff}button.primary{width:100%;margin-top:20px;border:0;border-radius:13px;padding:14px;background:#74e9ff;color:#05212a;font-weight:800;font-size:16px;cursor:pointer}.msg{min-height:22px;margin-top:14px;font-size:14px;color:#ff9a9a}.ok{color:#68f3c0}.back{display:block;text-align:center;margin-top:18px;color:#9fb2c2;text-decoration:none;font-size:14px}
+    *{box-sizing:border-box} body{margin:0;min-height:100vh;display:grid;place-items:center;background:#071018;color:#f5f8ff;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;padding:20px}.card{width:min(420px,100%);background:#0d1822;border:1px solid #213341;border-radius:24px;padding:28px;box-shadow:0 24px 70px #0008}.brand{font-size:28px;font-weight:800;letter-spacing:-.8px;margin-bottom:6px}.sub{color:#9fb2c2;margin-bottom:22px;line-height:1.5}.google{width:100%;display:flex;align-items:center;justify-content:center;gap:10px;border:1px solid #29404f;background:#fff;color:#17212b;border-radius:13px;padding:13px 14px;font-weight:800;font-size:15px;text-decoration:none;cursor:pointer}.gmark{font-size:19px;font-weight:900;color:#4285f4}.divider{display:flex;align-items:center;gap:12px;color:#6f8495;font-size:12px;margin:18px 0}.divider:before,.divider:after{content:"";height:1px;background:#243743;flex:1}.tabs{display:grid;grid-template-columns:1fr 1fr;background:#08121a;border-radius:14px;padding:4px;margin-bottom:18px}.tabs button{border:0;background:transparent;color:#9fb2c2;padding:11px;border-radius:11px;font-weight:700;cursor:pointer}.tabs button.active{background:#162633;color:#fff}label{display:block;font-size:13px;color:#a9bac8;margin:14px 0 7px}input{width:100%;border:1px solid #29404f;background:#09131b;color:white;border-radius:13px;padding:14px 15px;font-size:16px;outline:none}input:focus{border-color:#74e9ff}button.primary{width:100%;margin-top:20px;border:0;border-radius:13px;padding:14px;background:#74e9ff;color:#05212a;font-weight:800;font-size:16px;cursor:pointer}.msg{min-height:22px;margin-top:14px;font-size:14px;color:#ff9a9a}.ok{color:#68f3c0}.back{display:block;text-align:center;margin-top:18px;color:#9fb2c2;text-decoration:none;font-size:14px}
   </style>
 </head>
 <body>
   <main class="card">
     <div class="brand">ColdChat</div>
-    <div class="sub">Your ColdChat account. No ChatGPT login required.</div>
+    <div class="sub">Sign in to continue to ColdChat.</div>
+
+    <a class="google" href="/standalone/auth/google"><span class="gmark">G</span>Continue with Google</a>
+    <div class="divider">or continue with email</div>
+
     <div class="tabs"><button id="signinTab" class="active">Sign in</button><button id="signupTab">Create account</button></div>
     <form id="form">
       <div id="usernameWrap" hidden><label for="username">Username</label><input id="username" maxlength="32" autocomplete="nickname" placeholder="Choose a username" /></div>
@@ -27,6 +31,22 @@ let mode='signin';
 const $=id=>document.getElementById(id);
 function setMode(next){mode=next; $('signinTab').classList.toggle('active',mode==='signin'); $('signupTab').classList.toggle('active',mode==='signup'); $('usernameWrap').hidden=mode!=='signup'; $('submit').textContent=mode==='signup'?'Create account':'Sign in'; $('password').autocomplete=mode==='signup'?'new-password':'current-password'; $('msg').textContent='';}
 $('signinTab').onclick=()=>setMode('signin'); $('signupTab').onclick=()=>setMode('signup');
+
+async function finishGoogleSession(){
+  const params=new URLSearchParams(location.hash.slice(1));
+  const access_token=params.get('access_token');
+  const refresh_token=params.get('refresh_token');
+  if(!access_token||!refresh_token)return;
+  const msg=$('msg');
+  msg.className='msg'; msg.textContent='Finishing Google sign in…';
+  const r=await fetch('/standalone/auth/session',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({access_token,refresh_token,expires_in:params.get('expires_in')})});
+  const data=await r.json().catch(()=>({}));
+  if(!r.ok){msg.textContent=data.error||'Google sign in failed.';return;}
+  history.replaceState(null,'',location.pathname);
+  location.href='/';
+}
+finishGoogleSession();
+
 $('form').addEventListener('submit',async e=>{e.preventDefault(); const msg=$('msg'); msg.className='msg'; msg.textContent='Please wait…'; $('submit').disabled=true; try{const r=await fetch('/standalone/auth/login',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({mode,email:$('email').value,password:$('password').value})}); const data=await r.json(); if(!r.ok) throw new Error(data.error||'Authentication failed'); if(data.needsConfirmation){msg.className='msg ok'; msg.textContent='Account created. Check your email to confirm it, then sign in.'; setMode('signin'); return;} if(mode==='signup'){const username=$('username').value.trim(); if(!username) throw new Error('Choose a username.'); const p=await fetch('/standalone/profile',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({username})}); const pd=await p.json(); if(!p.ok) throw new Error(pd.error||'Could not create profile');} location.href='/';}catch(err){msg.textContent=err.message||String(err)}finally{$('submit').disabled=false;}});
 </script>
 </body>
