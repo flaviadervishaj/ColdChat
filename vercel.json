@@ -15,7 +15,7 @@
     },
     {
       "source": "/signin-with-chatgpt",
-      "destination": "https://coldchat.flaviadervishaj.chatgpt.site/signin-with-chatgpt"
+      "destination": "/standalone-login.html"
     }
   ]
 }
