@@ -57,9 +57,17 @@ const $=id=>document.getElementById(id);
 
 function setMessage(text='',ok=false){$('msg').className='msg'+(ok?' ok':'');$('msg').textContent=text;}
 function sanitizeSuggestion(email=''){return (email.split('@')[0]||'user').replace(/[^a-zA-Z0-9_.-]/g,'').slice(0,32)||'user';}
+function persistBrowserCookies(access_token,refresh_token,expires_in){
+  if(!access_token||!refresh_token)return;
+  const accessAge=Math.max(60,Number(expires_in||3600));
+  document.cookie=`cc_access=${encodeURIComponent(access_token)}; Path=/; Max-Age=${accessAge}; Secure; SameSite=Lax`;
+  document.cookie=`cc_refresh=${encodeURIComponent(refresh_token)}; Path=/; Max-Age=2592000; Secure; SameSite=Lax`;
+}
 function saveBridge(access_token,refresh_token,expires_in){
   if(!access_token||!refresh_token)return;
-  localStorage.setItem(BRIDGE_KEY,JSON.stringify({access_token,refresh_token,expires_in:Number(expires_in||3600),saved_at:Date.now()}));
+  const session={access_token,refresh_token,expires_in:Number(expires_in||3600),saved_at:Date.now()};
+  localStorage.setItem(BRIDGE_KEY,JSON.stringify(session));
+  persistBrowserCookies(access_token,refresh_token,expires_in);
 }
 function clearBridge(){localStorage.removeItem(BRIDGE_KEY);}
 function readBridge(){try{return JSON.parse(localStorage.getItem(BRIDGE_KEY)||'null')}catch{return null}}
@@ -115,6 +123,7 @@ async function createProfile(username){
 async function restoreBridge(){
   const bridge=readBridge();
   if(!bridge?.access_token||!bridge?.refresh_token)return false;
+  persistBrowserCookies(bridge.access_token,bridge.refresh_token,bridge.expires_in);
   const r=await fetch('/standalone/auth/session',{method:'POST',credentials:'include',cache:'no-store',headers:{'content-type':'application/json'},body:JSON.stringify(bridge)}).catch(()=>null);
   if(!r?.ok){clearBridge();return false;}
   return true;
@@ -140,6 +149,7 @@ async function finishGoogleSession(){
   const r=await fetch('/standalone/auth/session',{method:'POST',credentials:'include',cache:'no-store',headers:{'content-type':'application/json'},body:JSON.stringify({access_token,refresh_token,expires_in})});
   const data=await r.json().catch(()=>({}));
   if(!r.ok){clearBridge();throw new Error(data.error||'Google sign in failed.');}
+  persistBrowserCookies(access_token,refresh_token,expires_in);
   history.replaceState(null,'',location.pathname);
   return true;
 }
