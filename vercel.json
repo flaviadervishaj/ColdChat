@@ -2,6 +2,14 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
     {
+      "source": "/standalone/auth/google",
+      "destination": "/api/google?action=start"
+    },
+    {
+      "source": "/standalone/auth/session",
+      "destination": "/api/google?action=session"
+    },
+    {
       "source": "/standalone/:path*",
       "destination": "/api/native?path=:path*"
     },
