@@ -21,6 +21,37 @@ export default async function handler(req, res) {
     code = once(code, 'import(`./hls-A8FxWEQs.js`)', 'import(`/assets/hls-A8FxWEQs.js`)');
     code = once(code, '/signin-with-chatgpt?return_to=%2F', '/login');
 
+    // Never auto-open the legacy username modal merely because a session exists.
+    code = once(
+      code,
+      'e.ok&&(n(t.profile),t.profile||I(`profile`))',
+      'e.ok&&n(t.profile)'
+    );
+
+    // A user is shown as authenticated in the top bar only after a profile exists.
+    // Otherwise the button goes directly to the standalone login page.
+    code = once(
+      code,
+      'e?(0,a.jsxs)(`button`,{className:`account-chip`,onClick:()=>I(`profile`),children:[(0,a.jsx)(d,{profile:t,size:`tiny`}),(0,a.jsx)(`span`,{style:{color:t?.nameColor},children:t?.username||`Create profile`})]}):(0,a.jsxs)(`button`,{className:`join-button`,onClick:()=>I(`signin`),children:[`Join `,(0,a.jsx)(l,{name:`arrow`,size:16})]})',
+      't?(0,a.jsxs)(`button`,{className:`account-chip`,onClick:()=>I(`profile`),children:[(0,a.jsx)(d,{profile:t,size:`tiny`}),(0,a.jsx)(`span`,{style:{color:t?.nameColor},children:t.username})]}):(0,a.jsxs)(`button`,{className:`join-button`,onClick:()=>window.location.assign(`/login`),children:[`Join `,(0,a.jsx)(l,{name:`arrow`,size:16})]})'
+    );
+
+    code = once(
+      code,
+      'onClick:()=>{z(!1),I(t?`friends`:e?`profile`:`signin`)}',
+      'onClick:()=>{z(!1),t?I(`friends`):window.location.assign(`/login`)}'
+    );
+    code = once(
+      code,
+      'onClick:()=>{z(!1),I(e?`profile`:`signin`)}',
+      'onClick:()=>{z(!1),t?I(`profile`):window.location.assign(`/login`)}'
+    );
+    code = once(
+      code,
+      'onFocus:()=>{e?t||I(`profile`):I(`signin`)}',
+      'onFocus:()=>{t||window.location.assign(`/login`)}'
+    );
+
     code = once(code, 's().then(c);let l=window.setInterval(s,12e3)', 's();let l=window.setInterval(s,2e3)');
     code = once(code, 'c().then(()=>{u(),l()});let d=window.setInterval(l,700),f=window.setInterval(c,1e4)', 'c().then(()=>{l()});let d=window.setInterval(l,700),f=window.setInterval(c,1e4)');
 
@@ -59,12 +90,13 @@ export default async function handler(req, res) {
 
     res.statusCode = 200;
     res.setHeader('content-type', 'application/javascript; charset=utf-8');
-    res.setHeader('cache-control', 'public, max-age=0, s-maxage=3600, stale-while-revalidate=86400');
+    res.setHeader('cache-control', 'no-store, max-age=0');
     res.end(code);
   } catch (error) {
     console.error('ColdChat shell patch failed', error);
     res.statusCode = 500;
     res.setHeader('content-type', 'application/javascript; charset=utf-8');
+    res.setHeader('cache-control', 'no-store');
     res.end('throw new Error("ColdChat UI failed to load");');
   }
 }
