@@ -18,42 +18,61 @@
     const root = document.getElementById('root');
 
     let authUser = null;
+    let profile = null;
+
     try {
-      const response = await fetch('/standalone/auth/me', {
-        credentials: 'include',
-        cache: 'no-store'
-      });
+      const response = await fetch('/standalone/auth/me', { credentials:'include', cache:'no-store' });
       if (response.ok) {
         const data = await response.json();
         authUser = data.authUser || null;
       }
+      if (authUser) {
+        const pr = await fetch('/standalone/profile', { credentials:'include', cache:'no-store' });
+        if (pr.ok) {
+          const pd = await pr.json();
+          profile = pd.profile || null;
+        }
+        if (!profile) {
+          window.location.replace('/login?setup=1');
+          throw new Error('ColdChat profile setup required');
+        }
+      }
     } catch (error) {
-      console.warn('ColdChat auth check failed', error);
+      if (!String(error?.message || '').includes('profile setup required')) {
+        console.warn('ColdChat auth check failed', error);
+      }
     }
 
-    ReactDOMClient.hydrateRoot(
-      root,
-      React.createElement(App, { authUser })
-    );
+    if (!authUser || profile) {
+      ReactDOMClient.hydrateRoot(root, React.createElement(App, { authUser }));
+    }
 
-    // The recovered frontend still contains its original ChatGPT-site auth link.
-    // Route guest sign-in actions to ColdChat's standalone auth instead.
+    // Never allow the recovered frontend to open its old auth UI.
     document.addEventListener('click', (event) => {
       if (authUser) return;
-      const target = event.target.closest?.('a,button');
+      const target = event.target.closest?.('a,button,[role="button"]');
       if (!target) return;
-
       const href = target.getAttribute?.('href') || '';
-      const text = (target.textContent || '').trim();
-      const oldAuthLink = href.includes('signin-with-chatgpt') || href.includes('chatgpt.com') || href.includes('/auth/login');
-      const signInAction = /^(sign in|join|log in)$/i.test(text) || /sign in/i.test(text);
-
-      if (oldAuthLink || signInAction) {
+      const text = (target.textContent || '').replace(/\s+/g,' ').trim();
+      const oldAuthLink = /signin-with-chatgpt|chatgpt\.com|\/auth\/login/i.test(href);
+      const authAction = /^(sign in|join|log in|create account)$/i.test(text) || /sign in|log in|create account/i.test(text);
+      if (oldAuthLink || authAction) {
         event.preventDefault();
-        event.stopPropagation();
+        event.stopImmediatePropagation();
         window.location.assign('/login');
       }
     }, true);
+
+    // Rewrite old auth links that may be injected after render.
+    const rewriteLegacyAuth = () => {
+      if (authUser) return;
+      document.querySelectorAll('a[href]').forEach(a => {
+        const href=a.getAttribute('href')||'';
+        if (/signin-with-chatgpt|chatgpt\.com|\/auth\/login/i.test(href)) a.setAttribute('href','/login');
+      });
+    };
+    rewriteLegacyAuth();
+    new MutationObserver(rewriteLegacyAuth).observe(document.documentElement,{subtree:true,childList:true});
   </script>
 </body>
 </html>
