@@ -16,14 +16,37 @@
   <div id="root"></div>
   <script type="module">
     import { i as reactFactory, t as reactDomClientFactory } from '/assets/framework-CXnKph_e.js';
-    import App from '/coldchat-ui.js?v=20260822-auth-restore';
+    import App from '/coldchat-ui.js?v=20260822-session-bridge';
 
     const React = reactFactory();
     const ReactDOMClient = reactDomClientFactory();
     const root = document.getElementById('root');
+    const BRIDGE_KEY = 'coldchat_session_bridge';
 
     let authUser = null;
     let profile = null;
+
+    function readBridge() {
+      try { return JSON.parse(localStorage.getItem(BRIDGE_KEY) || 'null'); }
+      catch { return null; }
+    }
+
+    async function restoreSessionBridge() {
+      const bridge = readBridge();
+      if (!bridge?.access_token || !bridge?.refresh_token) return;
+      try {
+        const r = await fetch('/standalone/auth/session', {
+          method: 'POST',
+          credentials: 'include',
+          cache: 'no-store',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(bridge)
+        });
+        if (!r.ok) localStorage.removeItem(BRIDGE_KEY);
+      } catch {}
+    }
+
+    await restoreSessionBridge();
 
     try {
       const response = await fetch('/standalone/auth/me', {
