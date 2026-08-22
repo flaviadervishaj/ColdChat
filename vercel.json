@@ -22,6 +22,22 @@
       "destination": "/login"
     },
     {
+      "source": "/api/profile",
+      "destination": "/api/native?path=profile"
+    },
+    {
+      "source": "/api/messages",
+      "destination": "/api/native?path=messages"
+    },
+    {
+      "source": "/api/dms",
+      "destination": "/api/native?path=dms"
+    },
+    {
+      "source": "/api/presence",
+      "destination": "/api/native?path=presence"
+    },
+    {
       "source": "/assets/:path*",
       "destination": "https://coldchat.flaviadervishaj.chatgpt.site/assets/:path*"
     },
