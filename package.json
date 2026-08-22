@@ -1,5 +1,6 @@
 {
-  "name": "coldchat",
-  "version": "1.0.0",
-  "private": true
+  "name": "coldchat-proxy",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=18" }
 }
