@@ -24,6 +24,7 @@
 
     let authUser = null;
     let profile = null;
+    let profileChecked = false;
 
     try {
       const response = await fetch('/standalone/auth/me', {
@@ -44,20 +45,23 @@
         if (profileResponse.ok) {
           const data = await profileResponse.json();
           profile = data.profile || null;
+          profileChecked = true;
         }
       }
     } catch (error) {
       console.warn('ColdChat auth check failed', error);
     }
 
-    const appAuthUser = authUser && profile ? authUser : null;
+    // Authentication is determined by the session only. A temporary profile
+    // request failure must never make an authenticated user look signed out.
+    const appAuthUser = authUser;
 
     ReactDOMClient.hydrateRoot(
       root,
       React.createElement(App, { authUser: appAuthUser })
     );
 
-    const loginTarget = () => authUser && !profile ? '/login?setup=1' : '/login';
+    const loginTarget = () => authUser && profileChecked && !profile ? '/login?setup=1' : '/login';
 
     function textOf(el) {
       return (el?.textContent || '').replace(/\s+/g, ' ').trim();
@@ -105,20 +109,20 @@
         return;
       }
 
-      if ((!authUser || !profile) && (isComposer(target) || isSendAction(target))) {
+      if (!authUser && (isComposer(target) || isSendAction(target))) {
         event.preventDefault();
         event.stopImmediatePropagation();
-        window.location.assign(loginTarget());
+        window.location.assign('/login');
       }
     }, true);
 
     document.addEventListener('keydown', (event) => {
-      if (authUser && profile) return;
+      if (authUser) return;
       if (!isComposer(event.target)) return;
       if (event.key === 'Enter' || event.key.length === 1) {
         event.preventDefault();
         event.stopImmediatePropagation();
-        window.location.assign(loginTarget());
+        window.location.assign('/login');
       }
     }, true);
   </script>
