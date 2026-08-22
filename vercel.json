@@ -2,8 +2,16 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
     {
-      "source": "/:path*",
-      "destination": "https://coldchat.flaviadervishaj.chatgpt.site/:path*"
+      "source": "/assets/:path*",
+      "destination": "https://coldchat.flaviadervishaj.chatgpt.site/assets/:path*"
+    },
+    {
+      "source": "/api/:path*",
+      "destination": "https://coldchat.flaviadervishaj.chatgpt.site/api/:path*"
+    },
+    {
+      "source": "/signin-with-chatgpt",
+      "destination": "https://coldchat.flaviadervishaj.chatgpt.site/signin-with-chatgpt"
     }
   ]
 }
