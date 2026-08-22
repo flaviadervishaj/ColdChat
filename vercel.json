@@ -1,9 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "https://coldchat.flaviadervishaj.chatgpt.site/$1"
-    }
+    { "source": "/:path*", "destination": "/api/proxy?path=:path*" }
   ]
 }
