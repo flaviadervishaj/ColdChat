@@ -102,6 +102,11 @@ async function showSetup(user){
   $('username').focus();
 }
 
+function hasGoogleReturn(){
+  const params=new URLSearchParams(location.hash.slice(1));
+  return params.has('access_token')||params.has('refresh_token')||params.has('error')||params.has('error_description');
+}
+
 async function finishGoogleSession(){
   const params=new URLSearchParams(location.hash.slice(1));
   const error=params.get('error_description')||params.get('error');
@@ -119,13 +124,24 @@ async function finishGoogleSession(){
 
 async function boot(){
   try{
-    const googleCompleted=await finishGoogleSession();
-    currentUser=await getAuth();
-
-    if(!currentUser){
+    // A normal visit to /login must ALWAYS stay on the login page. Clear any
+    // old cookie/session so it cannot auto-redirect the user back to chat.
+    if(!hasGoogleReturn()){
+      await logout();
       setMode('signin');
       return;
     }
+
+    // Only a real Google OAuth return is allowed to continue automatically.
+    const googleCompleted=await finishGoogleSession();
+    if(!googleCompleted){
+      await logout();
+      setMode('signin');
+      return;
+    }
+
+    currentUser=await getAuth();
+    if(!currentUser)throw new Error('Google sign in did not complete. Please try again.');
 
     const profile=await getProfile();
     if(profile){
@@ -133,18 +149,7 @@ async function boot(){
       return;
     }
 
-    // Username setup is allowed only immediately after a real OAuth return or
-    // when the app explicitly sent the user here after authenticating.
-    const explicitSetup=new URLSearchParams(location.search).get('setup')==='1';
-    if(googleCompleted||explicitSetup){
-      await showSetup(currentUser);
-      return;
-    }
-
-    // A cookie/session without a ColdChat profile is stale/incomplete. Clear it
-    // instead of auto-opening username setup or redirecting in a loop.
-    await logout();
-    setMode('signin');
+    await showSetup(currentUser);
   }catch(err){
     await logout();
     setMode('signin');
@@ -191,10 +196,17 @@ $('form').addEventListener('submit',async e=>{
     }
 
     const profile=await getProfile();
-    if(profile){location.replace('/');return;}
+    if(profile){
+      location.replace('/');
+      return;
+    }
+
     await showSetup(currentUser);
-  }catch(err){setMessage(err.message||String(err));}
-  finally{submit.disabled=false;}
+  }catch(err){
+    setMessage(err.message||String(err));
+  }finally{
+    submit.disabled=false;
+  }
 });
 
 boot();
