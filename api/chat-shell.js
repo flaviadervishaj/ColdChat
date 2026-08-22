@@ -21,11 +21,12 @@ export default async function handler(req, res) {
     code = once(code, 'import(`./hls-A8FxWEQs.js`)', 'import(`/assets/hls-A8FxWEQs.js`)');
     code = once(code, '/signin-with-chatgpt?return_to=%2F', '/login');
 
-    // Never auto-open the legacy username modal merely because a session exists.
+    // Load the signed-in profile from the native API, with the standalone route as a fallback.
+    // This keeps the recovered UI authenticated even if the /api/profile rewrite is unavailable.
     code = once(
       code,
-      'e.ok&&(n(t.profile),t.profile||I(`profile`))',
-      'e.ok&&n(t.profile)'
+      'let e=await fetch(`/api/profile`,{cache:`no-store`}),t=await e.json();e.ok&&(n(t.profile),t.profile||I(`profile`))',
+      'let e=await fetch(`/api/profile`,{cache:`no-store`}),t=await e.json().catch(()=>({}));if(!e.ok||!t.profile){e=await fetch(`/standalone/profile`,{cache:`no-store`}),t=await e.json().catch(()=>({}))}e.ok&&n(t.profile)'
     );
 
     // A user is shown as authenticated in the top bar only after a profile exists.
