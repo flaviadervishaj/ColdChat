@@ -67,33 +67,49 @@ export default async function handler(req, res) {
     code = once(code, 's().then(c);let l=window.setInterval(s,12e3)', 's();let l=window.setInterval(s,2e3)');
     code = once(code, 'c().then(()=>{u(),l()});let d=window.setInterval(l,700),f=window.setInterval(c,1e4)', 'c().then(()=>{l()});let d=window.setInterval(l,700),f=window.setInterval(c,1e4)');
 
-    // Quick reactions: ice, fire and heart.
+    // Clicking the compact message menu must not trigger reply mode.
     code = once(
       code,
-      '(0,a.jsx)(`button`,{onClick:()=>Ce(e,`🧊`),"aria-label":`React`,children:`🧊`})',
-      '(0,a.jsx)(`button`,{className:`quick-reaction`,onClick:()=>Ce(e,`🧊`),"aria-label":`React with ice`,children:`🧊`}),(0,a.jsx)(`button`,{className:`quick-reaction`,onClick:()=>Ce(e,`🔥`),"aria-label":`React with fire`,children:`🔥`}),(0,a.jsx)(`button`,{className:`quick-reaction`,onClick:()=>Ce(e,`❤️`),"aria-label":`React with heart`,children:`❤️`})'
+      't.target.closest(`button, audio, input, label, a`)||M(e)',
+      't.target.closest(`button, summary, details, audio, input, label, a`)||M(e)'
     );
 
-    // Pin support.
+    // Pinned public messages always stay above regular messages.
+    code = once(
+      code,
+      'return Array.from(r.values()).sort((e,t)=>e.createdAt.localeCompare(t.createdAt)||e.id.localeCompare(t.id))',
+      'return Array.from(r.values()).sort((e,t)=>(t.pinned?1:0)-(e.pinned?1:0)||(e.pinned&&t.pinned?(t.pinnedAt||``).localeCompare(e.pinnedAt||``):0)||e.createdAt.localeCompare(t.createdAt)||e.id.localeCompare(t.id))'
+    );
+    code = once(
+      code,
+      'return[...n,...e.filter(e=>e.pending&&!i.has(e.id))]',
+      'return[...n,...e.filter(e=>e.pending&&!i.has(e.id))].sort((e,t)=>(t.pinned?1:0)-(e.pinned?1:0)||(e.pinned&&t.pinned?(t.pinnedAt||``).localeCompare(e.pinnedAt||``):0)||e.createdAt.localeCompare(t.createdAt)||e.id.localeCompare(t.id))'
+    );
+
+    // Pin support, with immediate local reordering after pin/unpin.
     code = once(
       code,
       'async function we(e){if(!Z&&!Q)return;let t=await fetch(`/api/messages/${encodeURIComponent(e.id)}`,{method:`DELETE`}),n=await t.json().catch(()=>({}));t.ok?p(t=>t.filter(t=>t.id!==e.id)):P(n.error||`Message not deleted.`)}function Te(e)',
-      'async function we(e){if(!Z&&!Q)return;let t=await fetch(`/api/messages/${encodeURIComponent(e.id)}`,{method:`DELETE`}),n=await t.json().catch(()=>({}));t.ok?p(t=>t.filter(t=>t.id!==e.id)):P(n.error||`Message not deleted.`)}async function Pe(e){if(!Z&&!Q)return;let t=await fetch(`/api/messages/${encodeURIComponent(e.id)}/pin`,{method:`POST`}),n=await t.json().catch(()=>({}));t.ok?p(t=>t.map(t=>t.id===e.id?{...t,pinned:!!n.pinned}:t)):P(n.error||`Message not pinned.`)}function Te(e)'
+      'async function we(e){if(!Z&&!Q)return;let t=await fetch(`/api/messages/${encodeURIComponent(e.id)}`,{method:`DELETE`}),n=await t.json().catch(()=>({}));t.ok?p(t=>t.filter(t=>t.id!==e.id)):P(n.error||`Message not deleted.`)}async function Pe(e){if(!Z&&!Q)return;let t=await fetch(`/api/messages/${encodeURIComponent(e.id)}/pin`,{method:`POST`}),n=await t.json().catch(()=>({}));t.ok?p(t=>t.map(t=>t.id===e.id?{...t,pinned:!!n.pinned,pinnedAt:n.pinned?new Date().toISOString():null}:t).sort((e,t)=>(t.pinned?1:0)-(e.pinned?1:0)||(e.pinned&&t.pinned?(t.pinnedAt||``).localeCompare(e.pinnedAt||``):0)||e.createdAt.localeCompare(t.createdAt)||e.id.localeCompare(t.id))):P(n.error||`Message not pinned.`)}function Te(e)'
     );
     code = once(
       code,
       'className:`message message-reply-target ${e.mine?`mine`:``} ${e.pending?`pending`:``}`',
       'className:`message message-reply-target ${e.mine?`mine`:``} ${e.pending?`pending`:``} ${e.pinned?`pinned`:``}`'
     );
+
+    // Separate message metadata, body and timestamp so badges/media/time never fight for one line.
     code = once(
       code,
-      'r?(0,a.jsx)(`em`,{className:`role-badge role-${e.role}`,children:r}):null,e.stickerUrl?',
-      'r?(0,a.jsx)(`em`,{className:`role-badge role-${e.role}`,children:r}):null,e.pinned?(0,a.jsx)(`em`,{className:`pin-badge`,children:`PINNED`}):null,e.stickerUrl?'
+      '(0,a.jsxs)(`div`,{className:`message-content`,children:[e.reply?(0,a.jsxs)(`div`,{className:`quoted`,children:[(0,a.jsx)(`b`,{children:e.reply.name}),(0,a.jsx)(`span`,{children:e.reply.text})]}):null,(0,a.jsxs)(`div`,{className:`message-line`,children:[(0,a.jsx)(`b`,{className:`message-username`,style:{color:e.nameColor},children:e.name}),r?(0,a.jsx)(`em`,{className:`role-badge role-${e.role}`,children:r}):null,e.stickerUrl?(0,a.jsx)(`img`,{className:`sticker-message`,src:e.stickerUrl,alt:`Sticker`,draggable:!1}):e.audioUrl?(0,a.jsxs)(`div`,{className:`voice-message`,children:[(0,a.jsx)(`span`,{children:(0,a.jsx)(l,{name:`mic`,size:15})}),(0,a.jsx)(`audio`,{src:e.audioUrl,controls:!0,preload:`metadata`,controlsList:`nodownload noplaybackrate`})]}):(0,a.jsx)(`span`,{className:`message-text`,children:e.text}),(0,a.jsx)(`time`,{className:`message-time`,children:e.time})]}),e.reactions?.length?(0,a.jsx)(`div`,{className:`reactions`,children:e.reactions.map(t=>(0,a.jsxs)(`button`,{onClick:()=>Ce(e,t.emoji),children:[t.emoji,(0,a.jsx)(`b`,{children:t.count})]},t.emoji))}):null]})',
+      '(0,a.jsxs)(`div`,{className:`message-content`,children:[e.reply?(0,a.jsxs)(`div`,{className:`quoted`,children:[(0,a.jsx)(`b`,{children:e.reply.name}),(0,a.jsx)(`span`,{children:e.reply.text})]}):null,(0,a.jsxs)(`div`,{className:`message-meta`,children:[(0,a.jsx)(`b`,{className:`message-username`,style:{color:e.nameColor},children:e.name}),r?(0,a.jsx)(`em`,{className:`role-badge role-${e.role}`,children:r}):null,e.pinned?(0,a.jsxs)(`em`,{className:`pin-badge`,children:[`📌 `,`Pinned`]}):null]}),(0,a.jsx)(`div`,{className:`message-body`,children:e.stickerUrl?(0,a.jsx)(`img`,{className:`sticker-message`,src:e.stickerUrl,alt:`Sticker`,draggable:!1}):e.audioUrl?(0,a.jsxs)(`div`,{className:`voice-message`,children:[(0,a.jsx)(`span`,{children:(0,a.jsx)(l,{name:`mic`,size:15})}),(0,a.jsx)(`audio`,{src:e.audioUrl,controls:!0,preload:`metadata`,controlsList:`nodownload noplaybackrate`})]}):(0,a.jsx)(`span`,{className:`message-text`,children:e.text})}),e.reactions?.length?(0,a.jsx)(`div`,{className:`reactions`,children:e.reactions.map(t=>(0,a.jsxs)(`button`,{onClick:()=>Ce(e,t.emoji),children:[t.emoji,(0,a.jsx)(`b`,{children:t.count})]},t.emoji))}):null,(0,a.jsx)(`time`,{className:`message-time`,children:e.time})]})'
     );
+
+    // One subtle message-action trigger. Reactions and moderation actions appear only in its popover.
     code = once(
       code,
-      'Z||Q?(0,a.jsx)(`button`,{onClick:()=>void we(e),"aria-label":`Delete message`,children:(0,a.jsx)(l,{name:`trash`,size:14})}):null,(Z||Q)&&e.profileId!==t?.id?',
-      'Z||Q?(0,a.jsx)(`button`,{onClick:()=>void we(e),"aria-label":`Delete message`,children:(0,a.jsx)(l,{name:`trash`,size:14})}):null,Z||Q?(0,a.jsx)(`button`,{onClick:()=>void Pe(e),"aria-label":e.pinned?`Unpin message`:`Pin message`,title:e.pinned?`Unpin`:`Pin`,children:e.pinned?`📍`:`📌`}):null,(Z||Q)&&e.profileId!==t?.id?'
+      '(0,a.jsxs)(`div`,{className:`message-actions`,children:[(0,a.jsx)(`button`,{onClick:()=>Ce(e,`🧊`),"aria-label":`React`,children:`🧊`}),Z||Q?(0,a.jsx)(`button`,{onClick:()=>void we(e),"aria-label":`Delete message`,children:(0,a.jsx)(l,{name:`trash`,size:14})}):null,(Z||Q)&&e.profileId!==t?.id?(0,a.jsx)(`button`,{onClick:()=>Te(e.profileId),"aria-label":`Moderate ${e.name}`,children:(0,a.jsx)(l,{name:`more`,size:15})}):null]})',
+      '(0,a.jsx)(`div`,{className:`message-actions`,children:(0,a.jsxs)(`details`,{className:`reaction-menu`,children:[(0,a.jsx)(`summary`,{"aria-label":`Message actions`,title:`React`,children:`♡`}),(0,a.jsxs)(`div`,{className:`reaction-popover`,children:[(0,a.jsx)(`button`,{onClick:t=>{Ce(e,`❤️`),t.currentTarget.closest(`details`)?.removeAttribute(`open`)},"aria-label":`React with heart`,children:`❤️`}),(0,a.jsx)(`button`,{onClick:t=>{Ce(e,`🔥`),t.currentTarget.closest(`details`)?.removeAttribute(`open`)},"aria-label":`React with fire`,children:`🔥`}),(0,a.jsx)(`button`,{onClick:t=>{Ce(e,`🧊`),t.currentTarget.closest(`details`)?.removeAttribute(`open`)},"aria-label":`React with ice`,children:`🧊`}),Z||Q?(0,a.jsx)(`span`,{className:`reaction-divider`}):null,Z||Q?(0,a.jsx)(`button`,{onClick:t=>{Pe(e),t.currentTarget.closest(`details`)?.removeAttribute(`open`)},"aria-label":e.pinned?`Unpin message`:`Pin message`,title:e.pinned?`Unpin`:`Pin`,children:e.pinned?`📍`:`📌`}):null,Z||Q?(0,a.jsx)(`button`,{onClick:t=>{we(e),t.currentTarget.closest(`details`)?.removeAttribute(`open`)},"aria-label":`Delete message`,children:(0,a.jsx)(l,{name:`trash`,size:14})}):null,(Z||Q)&&e.profileId!==t?.id?(0,a.jsx)(`button`,{onClick:t=>{Te(e.profileId),t.currentTarget.closest(`details`)?.removeAttribute(`open`)},"aria-label":`Moderate ${e.name}`,children:(0,a.jsx)(l,{name:`more`,size:15})}):null]})]})})'
     );
 
     // Moderator ban UI while keeping moderator assignment owner-only.
@@ -109,8 +125,7 @@ export default async function handler(req, res) {
     );
     code = code.replace('`Timeouts and messages`', '`Ban · timeout · pin`');
 
-    // Important: send every recovered UI API call through our native backend.
-    // This avoids the legacy /api/* fallback and keeps reads + writes on one auth/session path.
+    // Route every recovered UI API call through our native backend.
     code = code.replaceAll('/api/', '/standalone/');
 
     res.statusCode = 200;
