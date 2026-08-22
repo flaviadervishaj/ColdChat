@@ -14,16 +14,20 @@
       "destination": "/api/native?path=:path*"
     },
     {
+      "source": "/login",
+      "destination": "/standalone-login.html"
+    },
+    {
+      "source": "/signin-with-chatgpt",
+      "destination": "/login"
+    },
+    {
       "source": "/assets/:path*",
       "destination": "https://coldchat.flaviadervishaj.chatgpt.site/assets/:path*"
     },
     {
       "source": "/api/:path*",
       "destination": "https://coldchat.flaviadervishaj.chatgpt.site/api/:path*"
-    },
-    {
-      "source": "/signin-with-chatgpt",
-      "destination": "/standalone-login.html"
     }
   ]
 }
