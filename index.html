@@ -16,7 +16,7 @@
   <div id="root"></div>
   <script type="module">
     import { i as reactFactory, t as reactDomClientFactory } from '/assets/framework-CXnKph_e.js';
-    import App from '/coldchat-ui.js';
+    import App from '/coldchat-ui.js?v=20260822-auth-flow-4';
 
     const React = reactFactory();
     const ReactDOMClient = reactDomClientFactory();
@@ -36,8 +36,6 @@
         authUser = authData.authUser || null;
         if (!authUser) return;
 
-        // A valid signed-in ColdChat user must also have a profile. Retry once
-        // before treating the cookie as stale/incomplete.
         for (let attempt = 0; attempt < 2; attempt++) {
           const profileResponse = await fetch('/standalone/profile', {
             credentials: 'include',
@@ -51,8 +49,6 @@
           if (attempt === 0) await new Promise(resolve => setTimeout(resolve, 180));
         }
 
-        // Never expose an incomplete/stale session to the recovered frontend,
-        // because its legacy behavior opens the username modal automatically.
         await fetch('/standalone/auth/logout', {
           method: 'POST',
           credentials: 'include',
