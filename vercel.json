@@ -22,16 +22,44 @@
       "destination": "/login"
     },
     {
+      "source": "/api/profile/:path*",
+      "destination": "/api/native?path=profile/:path*"
+    },
+    {
       "source": "/api/profile",
       "destination": "/api/native?path=profile"
+    },
+    {
+      "source": "/api/messages/:path*",
+      "destination": "/api/native?path=messages/:path*"
     },
     {
       "source": "/api/messages",
       "destination": "/api/native?path=messages"
     },
     {
+      "source": "/api/dms/:path*",
+      "destination": "/api/native?path=dms/:path*"
+    },
+    {
       "source": "/api/dms",
       "destination": "/api/native?path=dms"
+    },
+    {
+      "source": "/api/friends",
+      "destination": "/api/native?path=friends"
+    },
+    {
+      "source": "/api/moderation",
+      "destination": "/api/native?path=moderation"
+    },
+    {
+      "source": "/api/reactions",
+      "destination": "/api/native?path=reactions"
+    },
+    {
+      "source": "/api/stickers",
+      "destination": "/api/native?path=stickers"
     },
     {
       "source": "/api/presence",
