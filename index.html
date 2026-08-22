@@ -6,9 +6,6 @@
   <meta name="theme-color" content="#08111f" />
   <title>ColdChat</title>
   <link rel="stylesheet" href="/assets/index-DtLo_uuG.css" />
-  <style>
-    [data-coldchat-guest-composer="true"]{cursor:pointer!important;opacity:.78}
-  </style>
 </head>
 <body>
   <div id="root"></div>
@@ -28,136 +25,97 @@
         credentials: 'include',
         cache: 'no-store'
       });
+
       if (response.ok) {
         const data = await response.json();
         authUser = data.authUser || null;
       }
 
       if (authUser) {
-        const pr = await fetch('/standalone/profile', {
+        const profileResponse = await fetch('/standalone/profile', {
           credentials: 'include',
           cache: 'no-store'
         });
-        if (pr.ok) {
-          const pd = await pr.json();
-          profile = pd.profile || null;
+        if (profileResponse.ok) {
+          const data = await profileResponse.json();
+          profile = data.profile || null;
         }
       }
     } catch (error) {
       console.warn('ColdChat auth check failed', error);
     }
 
-    // ColdChat is always public to view. Authentication only unlocks writing/actions.
-    ReactDOMClient.hydrateRoot(root, React.createElement(App, { authUser }));
+    // Always render ColdChat, including for guests.
+    ReactDOMClient.hydrateRoot(
+      root,
+      React.createElement(App, { authUser })
+    );
 
     const loginTarget = () => authUser && !profile ? '/login?setup=1' : '/login';
 
-    function isLegacyAuthAction(target) {
-      const href = target?.getAttribute?.('href') || '';
-      const text = (target?.textContent || '').replace(/\s+/g, ' ').trim();
-      return /signin-with-chatgpt|chatgpt\.com|\/auth\/login/i.test(href) ||
-             /^(sign in|join|log in|create account)$/i.test(text) ||
-             /sign in|log in/i.test(text);
+    function textOf(el) {
+      return (el?.textContent || '').replace(/\s+/g, ' ').trim();
     }
 
-    function looksLikeComposer(el) {
+    function isAuthAction(el) {
+      const href = el?.getAttribute?.('href') || '';
+      const text = textOf(el);
+      return /signin-with-chatgpt|chatgpt\.com|\/auth\/login/i.test(href) ||
+             /^(sign in|log in|join|create account)$/i.test(text);
+    }
+
+    function isComposer(el) {
       if (!el) return false;
       const tag = (el.tagName || '').toLowerCase();
       const role = (el.getAttribute?.('role') || '').toLowerCase();
       const placeholder = (el.getAttribute?.('placeholder') || '').toLowerCase();
       const aria = (el.getAttribute?.('aria-label') || '').toLowerCase();
       const editable = el.getAttribute?.('contenteditable') === 'true';
-      const textLike = tag === 'textarea' || (tag === 'input' && (!el.type || ['text','search'].includes(el.type))) || role === 'textbox' || editable;
-      if (!textLike) return false;
-      return /message|chat|write|type|say something|reply/.test(`${placeholder} ${aria}`) || tag === 'textarea' || editable;
+
+      const textInput = tag === 'textarea' ||
+        (tag === 'input' && (!el.type || ['text', 'search'].includes(el.type))) ||
+        role === 'textbox' || editable;
+
+      if (!textInput) return false;
+      return tag === 'textarea' || editable || /message|chat|write|type|reply/.test(`${placeholder} ${aria}`);
     }
 
-    function looksLikeSendButton(el) {
+    function isSendAction(el) {
       if (!el) return false;
-      const text = (el.textContent || '').replace(/\s+/g, ' ').trim().toLowerCase();
+      const text = textOf(el).toLowerCase();
       const aria = (el.getAttribute?.('aria-label') || '').toLowerCase();
       const title = (el.getAttribute?.('title') || '').toLowerCase();
-      return /^(send|post)$/.test(text) || /send message|send|post message/.test(`${aria} ${title}`);
+      return /^(send|post)$/.test(text) || /send message|post message/.test(`${aria} ${title}`);
     }
 
-    function gateComposer() {
-      const canWrite = Boolean(authUser && profile);
-      document.querySelectorAll('textarea,input,[role="textbox"],[contenteditable]').forEach(el => {
-        if (!looksLikeComposer(el)) return;
-
-        if (canWrite) {
-          el.removeAttribute('data-coldchat-guest-composer');
-          if ('readOnly' in el) el.readOnly = false;
-          if (el.dataset.coldchatOldPlaceholder !== undefined) {
-            el.setAttribute('placeholder', el.dataset.coldchatOldPlaceholder);
-            delete el.dataset.coldchatOldPlaceholder;
-          }
-          if (el.dataset.coldchatWasEditable === 'true') {
-            el.setAttribute('contenteditable', 'true');
-            delete el.dataset.coldchatWasEditable;
-          }
-          return;
-        }
-
-        el.setAttribute('data-coldchat-guest-composer', 'true');
-        if ('readOnly' in el) el.readOnly = true;
-        if (el.hasAttribute('placeholder') && el.dataset.coldchatOldPlaceholder === undefined) {
-          el.dataset.coldchatOldPlaceholder = el.getAttribute('placeholder') || '';
-        }
-        if (el.hasAttribute('placeholder')) {
-          el.setAttribute('placeholder', authUser ? 'Finish your profile to write in chat' : 'Sign in to write in chat');
-        }
-        if (el.getAttribute('contenteditable') === 'true') {
-          el.dataset.coldchatWasEditable = 'true';
-          el.setAttribute('contenteditable', 'false');
-        }
-      });
-
-      // Any legacy auth links created by the recovered frontend should use our clean login page.
-      document.querySelectorAll('a[href]').forEach(a => {
-        const href = a.getAttribute('href') || '';
-        if (/signin-with-chatgpt|chatgpt\.com|\/auth\/login/i.test(href)) {
-          a.setAttribute('href', loginTarget());
-        }
-      });
-    }
-
-    // Capture auth and chat-writing attempts before the old frontend can open its legacy modal.
-    document.addEventListener('click', event => {
+    // Redirect only the actions that require authentication.
+    document.addEventListener('click', (event) => {
       const target = event.target.closest?.('a,button,[role="button"],textarea,input,[role="textbox"],[contenteditable]');
       if (!target) return;
 
-      if (isLegacyAuthAction(target)) {
+      if (isAuthAction(target)) {
         event.preventDefault();
         event.stopImmediatePropagation();
         window.location.assign('/login');
         return;
       }
 
-      if ((!authUser || !profile) && (looksLikeComposer(target) || looksLikeSendButton(target))) {
+      if ((!authUser || !profile) && (isComposer(target) || isSendAction(target))) {
         event.preventDefault();
         event.stopImmediatePropagation();
         window.location.assign(loginTarget());
       }
     }, true);
 
-    document.addEventListener('keydown', event => {
+    document.addEventListener('keydown', (event) => {
       if (authUser && profile) return;
-      const target = event.target;
-      if (looksLikeComposer(target) && (event.key === 'Enter' || event.key.length === 1)) {
+      if (!isComposer(event.target)) return;
+      if (event.key === 'Enter' || event.key.length === 1) {
         event.preventDefault();
         event.stopImmediatePropagation();
         window.location.assign(loginTarget());
       }
     }, true);
-
-    gateComposer();
-    new MutationObserver(gateComposer).observe(document.documentElement, {
-      subtree: true,
-      childList: true,
-      attributes: true,
-      attributeFilter: ['href','placeholder','contenteditable','aria-label']
-    });
   </script>
 </body>
 </html>
