@@ -51,9 +51,28 @@ export default async function handler(req, res) {
       'onFocus:()=>{t||window.location.assign(`/login`)}'
     );
 
+    // Keep private chat focused and provide a one-click way back to public chat.
+    code = once(
+      code,
+      'className:`conversation-area ${B&&!y?`with-live`:`chat-only`}`',
+      'className:`conversation-area ${B&&!y?`with-live`:`chat-only`} ${y?`private-view`:``}`'
+    );
+    code = once(
+      code,
+      'children:[y?null:(0,a.jsxs)(`button`,{className:`live-toggle`',
+      'children:[y?(0,a.jsxs)(`button`,{className:`dm-back-button`,onClick:()=>b(null),"aria-label":`Back to public chat`,title:`Back to public chat`,children:[(0,a.jsx)(l,{name:`close`,size:15}),(0,a.jsx)(`span`,{children:`Public chat`})]}):(0,a.jsxs)(`button`,{className:`live-toggle`'
+    );
+
     // The standalone backend does not expose the legacy SSE streams; poll instead.
     code = once(code, 's().then(c);let l=window.setInterval(s,12e3)', 's();let l=window.setInterval(s,2e3)');
     code = once(code, 'c().then(()=>{u(),l()});let d=window.setInterval(l,700),f=window.setInterval(c,1e4)', 'c().then(()=>{l()});let d=window.setInterval(l,700),f=window.setInterval(c,1e4)');
+
+    // Quick reactions: ice, fire and heart.
+    code = once(
+      code,
+      '(0,a.jsx)(`button`,{onClick:()=>Ce(e,`🧊`),"aria-label":`React`,children:`🧊`})',
+      '(0,a.jsx)(`button`,{className:`quick-reaction`,onClick:()=>Ce(e,`🧊`),"aria-label":`React with ice`,children:`🧊`}),(0,a.jsx)(`button`,{className:`quick-reaction`,onClick:()=>Ce(e,`🔥`),"aria-label":`React with fire`,children:`🔥`}),(0,a.jsx)(`button`,{className:`quick-reaction`,onClick:()=>Ce(e,`❤️`),"aria-label":`React with heart`,children:`❤️`})'
+    );
 
     // Pin support.
     code = once(
