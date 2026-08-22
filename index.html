@@ -17,10 +17,43 @@
     const ReactDOMClient = reactDomClientFactory();
     const root = document.getElementById('root');
 
+    let authUser = null;
+    try {
+      const response = await fetch('/standalone/auth/me', {
+        credentials: 'include',
+        cache: 'no-store'
+      });
+      if (response.ok) {
+        const data = await response.json();
+        authUser = data.authUser || null;
+      }
+    } catch (error) {
+      console.warn('ColdChat auth check failed', error);
+    }
+
     ReactDOMClient.hydrateRoot(
       root,
-      React.createElement(App, { authUser: null })
+      React.createElement(App, { authUser })
     );
+
+    // The recovered frontend still contains its original ChatGPT-site auth link.
+    // Route guest sign-in actions to ColdChat's standalone auth instead.
+    document.addEventListener('click', (event) => {
+      if (authUser) return;
+      const target = event.target.closest?.('a,button');
+      if (!target) return;
+
+      const href = target.getAttribute?.('href') || '';
+      const text = (target.textContent || '').trim();
+      const oldAuthLink = href.includes('signin-with-chatgpt') || href.includes('chatgpt.com') || href.includes('/auth/login');
+      const signInAction = /^(sign in|join|log in)$/i.test(text) || /sign in/i.test(text);
+
+      if (oldAuthLink || signInAction) {
+        event.preventDefault();
+        event.stopPropagation();
+        window.location.assign('/login');
+      }
+    }, true);
   </script>
 </body>
 </html>
