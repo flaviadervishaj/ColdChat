@@ -45,10 +45,14 @@
       console.warn('ColdChat auth check failed', error);
     }
 
-    // Always render ColdChat, including for guests.
+    // Only expose an authenticated user to the recovered frontend after
+    // ColdChat has a complete profile. This prevents the legacy onboarding
+    // modal from opening automatically on the public home page.
+    const appAuthUser = authUser && profile ? authUser : null;
+
     ReactDOMClient.hydrateRoot(
       root,
-      React.createElement(App, { authUser })
+      React.createElement(App, { authUser: appAuthUser })
     );
 
     const loginTarget = () => authUser && !profile ? '/login?setup=1' : '/login';
@@ -88,7 +92,6 @@
       return /^(send|post)$/.test(text) || /send message|post message/.test(`${aria} ${title}`);
     }
 
-    // Redirect only the actions that require authentication.
     document.addEventListener('click', (event) => {
       const target = event.target.closest?.('a,button,[role="button"],textarea,input,[role="textbox"],[contenteditable]');
       if (!target) return;
@@ -96,7 +99,7 @@
       if (isAuthAction(target)) {
         event.preventDefault();
         event.stopImmediatePropagation();
-        window.location.assign('/login');
+        window.location.assign(loginTarget());
         return;
       }
 
