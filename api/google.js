@@ -32,7 +32,7 @@ export default async function handler(req, res) {
     const host = req.headers['x-forwarded-host'] || req.headers.host || 'coldchat.vercel.app';
     const proto = req.headers['x-forwarded-proto'] || 'https';
     const redirectTo = `${proto}://${host}/login`;
-    const url = `${SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectTo)}`;
+    const url = `${SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectTo)}&prompt=select_account`;
     res.statusCode = 302;
     res.setHeader('cache-control', 'private, no-store');
     res.setHeader('location', url);
