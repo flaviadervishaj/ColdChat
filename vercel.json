@@ -76,10 +76,6 @@
     {
       "source": "/assets/:path*",
       "destination": "https://coldchat.flaviadervishaj.chatgpt.site/assets/:path*"
-    },
-    {
-      "source": "/api/:path*",
-      "destination": "https://coldchat.flaviadervishaj.chatgpt.site/api/:path*"
     }
   ]
 }
