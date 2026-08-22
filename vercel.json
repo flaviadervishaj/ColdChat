@@ -22,6 +22,10 @@
       "destination": "/login"
     },
     {
+      "source": "/coldchat-ui.js",
+      "destination": "/api/chat-shell"
+    },
+    {
       "source": "/api/profile/:path*",
       "destination": "/api/native?path=profile/:path*"
     },
