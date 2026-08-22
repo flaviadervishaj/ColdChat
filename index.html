@@ -2,13 +2,25 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
   <meta name="theme-color" content="#08111f" />
   <title>ColdChat</title>
+  <link rel="stylesheet" href="/assets/index-DtLo_uuG.css" />
 </head>
 <body>
-  <main style="min-height:100vh;background:#08111f;color:#fff;display:grid;place-items:center;font-family:system-ui,sans-serif">
-    <p>Loading ColdChat…</p>
-  </main>
+  <div id="root"></div>
+  <script type="module">
+    import { i as reactFactory, t as reactDomClientFactory } from '/assets/framework-CXnKph_e.js';
+    import App from '/assets/chat-shell-BA0J5a0Y.js';
+
+    const React = reactFactory();
+    const ReactDOMClient = reactDomClientFactory();
+    const root = document.getElementById('root');
+
+    ReactDOMClient.hydrateRoot(
+      root,
+      React.createElement(App, { authUser: null })
+    );
+  </script>
 </body>
 </html>
