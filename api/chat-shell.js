@@ -21,16 +21,14 @@ export default async function handler(req, res) {
     code = once(code, 'import(`./hls-A8FxWEQs.js`)', 'import(`/assets/hls-A8FxWEQs.js`)');
     code = once(code, '/signin-with-chatgpt?return_to=%2F', '/login');
 
-    // Load the signed-in profile from the native API, with the standalone route as a fallback.
-    // This keeps the recovered UI authenticated even if the /api/profile rewrite is unavailable.
+    // Keep profile loading inside the recovered UI without reopening the legacy onboarding modal.
     code = once(
       code,
       'let e=await fetch(`/api/profile`,{cache:`no-store`}),t=await e.json();e.ok&&(n(t.profile),t.profile||I(`profile`))',
-      'let e=await fetch(`/api/profile`,{cache:`no-store`}),t=await e.json().catch(()=>({}));if(!e.ok||!t.profile){e=await fetch(`/standalone/profile`,{cache:`no-store`}),t=await e.json().catch(()=>({}))}e.ok&&n(t.profile)'
+      'let e=await fetch(`/api/profile`,{cache:`no-store`}),t=await e.json().catch(()=>({}));e.ok&&n(t.profile)'
     );
 
     // A user is shown as authenticated in the top bar only after a profile exists.
-    // Otherwise the button goes directly to the standalone login page.
     code = once(
       code,
       'e?(0,a.jsxs)(`button`,{className:`account-chip`,onClick:()=>I(`profile`),children:[(0,a.jsx)(d,{profile:t,size:`tiny`}),(0,a.jsx)(`span`,{style:{color:t?.nameColor},children:t?.username||`Create profile`})]}):(0,a.jsxs)(`button`,{className:`join-button`,onClick:()=>I(`signin`),children:[`Join `,(0,a.jsx)(l,{name:`arrow`,size:16})]})',
@@ -53,9 +51,11 @@ export default async function handler(req, res) {
       'onFocus:()=>{t||window.location.assign(`/login`)}'
     );
 
+    // The standalone backend does not expose the legacy SSE streams; poll instead.
     code = once(code, 's().then(c);let l=window.setInterval(s,12e3)', 's();let l=window.setInterval(s,2e3)');
     code = once(code, 'c().then(()=>{u(),l()});let d=window.setInterval(l,700),f=window.setInterval(c,1e4)', 'c().then(()=>{l()});let d=window.setInterval(l,700),f=window.setInterval(c,1e4)');
 
+    // Pin support.
     code = once(
       code,
       'async function we(e){if(!Z&&!Q)return;let t=await fetch(`/api/messages/${encodeURIComponent(e.id)}`,{method:`DELETE`}),n=await t.json().catch(()=>({}));t.ok?p(t=>t.filter(t=>t.id!==e.id)):P(n.error||`Message not deleted.`)}function Te(e)',
@@ -77,6 +77,7 @@ export default async function handler(req, res) {
       'Z||Q?(0,a.jsx)(`button`,{onClick:()=>void we(e),"aria-label":`Delete message`,children:(0,a.jsx)(l,{name:`trash`,size:14})}):null,Z||Q?(0,a.jsx)(`button`,{onClick:()=>void Pe(e),"aria-label":e.pinned?`Unpin message`:`Pin message`,title:e.pinned?`Unpin`:`Pin`,children:e.pinned?`📍`:`📌`}):null,(Z||Q)&&e.profileId!==t?.id?'
     );
 
+    // Moderator ban UI while keeping moderator assignment owner-only.
     code = once(
       code,
       't===`owner`&&!F?(0,a.jsxs)(a.Fragment,{children:[(0,a.jsxs)(`section`,{className:`moderation-card`',
@@ -88,6 +89,10 @@ export default async function handler(req, res) {
       'children:N.role===`moderator`?`Remove MOD`:N.restriction?.type===`ban`?`Banned`:`Make MOD`})]}):null,(0,a.jsxs)(`section`,{className:`moderation-card danger`'
     );
     code = code.replace('`Timeouts and messages`', '`Ban · timeout · pin`');
+
+    // Important: send every recovered UI API call through our native backend.
+    // This avoids the legacy /api/* fallback and keeps reads + writes on one auth/session path.
+    code = code.replaceAll('/api/', '/standalone/');
 
     res.statusCode = 200;
     res.setHeader('content-type', 'application/javascript; charset=utf-8');
