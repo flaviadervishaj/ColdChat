@@ -31,7 +31,7 @@ export default async function handler(req, res) {
   if (action === 'start' && req.method === 'GET') {
     const host = req.headers['x-forwarded-host'] || req.headers.host || 'coldchat.vercel.app';
     const proto = req.headers['x-forwarded-proto'] || 'https';
-    const redirectTo = `${proto}://${host}/signin-with-chatgpt`;
+    const redirectTo = `${proto}://${host}/login`;
     const url = `${SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectTo)}`;
     res.statusCode = 302;
     res.setHeader('cache-control', 'private, no-store');
