@@ -24,44 +24,55 @@
 
     let authUser = null;
     let profile = null;
-    let profileChecked = false;
 
-    try {
-      const response = await fetch('/standalone/auth/me', {
-        credentials: 'include',
-        cache: 'no-store'
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        authUser = data.authUser || null;
-      }
-
-      if (authUser) {
-        const profileResponse = await fetch('/standalone/profile', {
+    async function readAuthState() {
+      try {
+        const authResponse = await fetch('/standalone/auth/me', {
           credentials: 'include',
           cache: 'no-store'
         });
-        if (profileResponse.ok) {
-          const data = await profileResponse.json();
-          profile = data.profile || null;
-          profileChecked = true;
+        if (!authResponse.ok) return;
+        const authData = await authResponse.json().catch(() => ({}));
+        authUser = authData.authUser || null;
+        if (!authUser) return;
+
+        // A valid signed-in ColdChat user must also have a profile. Retry once
+        // before treating the cookie as stale/incomplete.
+        for (let attempt = 0; attempt < 2; attempt++) {
+          const profileResponse = await fetch('/standalone/profile', {
+            credentials: 'include',
+            cache: 'no-store'
+          }).catch(() => null);
+          if (profileResponse?.ok) {
+            const profileData = await profileResponse.json().catch(() => ({}));
+            profile = profileData.profile || null;
+            if (profile) return;
+          }
+          if (attempt === 0) await new Promise(resolve => setTimeout(resolve, 180));
         }
+
+        // Never expose an incomplete/stale session to the recovered frontend,
+        // because its legacy behavior opens the username modal automatically.
+        await fetch('/standalone/auth/logout', {
+          method: 'POST',
+          credentials: 'include',
+          cache: 'no-store'
+        }).catch(() => null);
+        authUser = null;
+        profile = null;
+      } catch (error) {
+        console.warn('ColdChat auth check failed', error);
+        authUser = null;
+        profile = null;
       }
-    } catch (error) {
-      console.warn('ColdChat auth check failed', error);
     }
 
-    // Authentication is determined by the session only. A temporary profile
-    // request failure must never make an authenticated user look signed out.
-    const appAuthUser = authUser;
+    await readAuthState();
 
     ReactDOMClient.hydrateRoot(
       root,
-      React.createElement(App, { authUser: appAuthUser })
+      React.createElement(App, { authUser: authUser && profile ? authUser : null })
     );
-
-    const loginTarget = () => authUser && profileChecked && !profile ? '/login?setup=1' : '/login';
 
     function textOf(el) {
       return (el?.textContent || '').replace(/\s+/g, ' ').trim();
@@ -70,8 +81,8 @@
     function isAuthAction(el) {
       const href = el?.getAttribute?.('href') || '';
       const text = textOf(el);
-      return /signin-with-chatgpt|chatgpt\.com|\/auth\/login/i.test(href) ||
-             /^(sign in|log in|join|create account)$/i.test(text);
+      return /signin-with-chatgpt|chatgpt\.com|\/auth\/login|\/login/i.test(href) ||
+             /^(sign in|log in|join|create account|create profile)$/i.test(text);
     }
 
     function isComposer(el) {
@@ -81,11 +92,9 @@
       const placeholder = (el.getAttribute?.('placeholder') || '').toLowerCase();
       const aria = (el.getAttribute?.('aria-label') || '').toLowerCase();
       const editable = el.getAttribute?.('contenteditable') === 'true';
-
       const textInput = tag === 'textarea' ||
         (tag === 'input' && (!el.type || ['text', 'search'].includes(el.type))) ||
         role === 'textbox' || editable;
-
       if (!textInput) return false;
       return tag === 'textarea' || editable || /message|chat|write|type|reply/.test(`${placeholder} ${aria}`);
     }
@@ -102,10 +111,10 @@
       const target = event.target.closest?.('a,button,[role="button"],textarea,input,[role="textbox"],[contenteditable]');
       if (!target) return;
 
-      if (isAuthAction(target)) {
+      if (!authUser && isAuthAction(target)) {
         event.preventDefault();
         event.stopImmediatePropagation();
-        window.location.assign(loginTarget());
+        window.location.assign('/login');
         return;
       }
 
