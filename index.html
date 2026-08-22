@@ -16,7 +16,7 @@
   <div id="root"></div>
   <script type="module">
     import { i as reactFactory, t as reactDomClientFactory } from '/assets/framework-CXnKph_e.js';
-    import App from '/coldchat-ui.js?v=20260822-auth-flow-4';
+    import App from '/coldchat-ui.js?v=20260822-auth-restore';
 
     const React = reactFactory();
     const ReactDOMClient = reactDomClientFactory();
@@ -25,50 +25,39 @@
     let authUser = null;
     let profile = null;
 
-    async function readAuthState() {
-      try {
-        const authResponse = await fetch('/standalone/auth/me', {
+    try {
+      const response = await fetch('/standalone/auth/me', {
+        credentials: 'include',
+        cache: 'no-store'
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        authUser = data.authUser || null;
+      }
+
+      if (authUser) {
+        const profileResponse = await fetch('/standalone/profile', {
           credentials: 'include',
           cache: 'no-store'
         });
-        if (!authResponse.ok) return;
-        const authData = await authResponse.json().catch(() => ({}));
-        authUser = authData.authUser || null;
-        if (!authUser) return;
-
-        for (let attempt = 0; attempt < 2; attempt++) {
-          const profileResponse = await fetch('/standalone/profile', {
-            credentials: 'include',
-            cache: 'no-store'
-          }).catch(() => null);
-          if (profileResponse?.ok) {
-            const profileData = await profileResponse.json().catch(() => ({}));
-            profile = profileData.profile || null;
-            if (profile) return;
-          }
-          if (attempt === 0) await new Promise(resolve => setTimeout(resolve, 180));
+        if (profileResponse.ok) {
+          const data = await profileResponse.json();
+          profile = data.profile || null;
         }
-
-        await fetch('/standalone/auth/logout', {
-          method: 'POST',
-          credentials: 'include',
-          cache: 'no-store'
-        }).catch(() => null);
-        authUser = null;
-        profile = null;
-      } catch (error) {
-        console.warn('ColdChat auth check failed', error);
-        authUser = null;
-        profile = null;
       }
+    } catch (error) {
+      console.warn('ColdChat auth check failed', error);
     }
 
-    await readAuthState();
+    const appAuthUser = authUser && profile ? authUser : null;
 
     ReactDOMClient.hydrateRoot(
       root,
-      React.createElement(App, { authUser: authUser && profile ? authUser : null })
+      React.createElement(App, { authUser: appAuthUser })
     );
+
+    const loginTarget = () => authUser && !profile ? '/login?setup=1' : '/login';
 
     function textOf(el) {
       return (el?.textContent || '').replace(/\s+/g, ' ').trim();
@@ -77,8 +66,8 @@
     function isAuthAction(el) {
       const href = el?.getAttribute?.('href') || '';
       const text = textOf(el);
-      return /signin-with-chatgpt|chatgpt\.com|\/auth\/login|\/login/i.test(href) ||
-             /^(sign in|log in|join|create account|create profile)$/i.test(text);
+      return /signin-with-chatgpt|chatgpt\.com|\/auth\/login/i.test(href) ||
+             /^(sign in|log in|join|create account)$/i.test(text);
     }
 
     function isComposer(el) {
@@ -88,9 +77,11 @@
       const placeholder = (el.getAttribute?.('placeholder') || '').toLowerCase();
       const aria = (el.getAttribute?.('aria-label') || '').toLowerCase();
       const editable = el.getAttribute?.('contenteditable') === 'true';
+
       const textInput = tag === 'textarea' ||
         (tag === 'input' && (!el.type || ['text', 'search'].includes(el.type))) ||
         role === 'textbox' || editable;
+
       if (!textInput) return false;
       return tag === 'textarea' || editable || /message|chat|write|type|reply/.test(`${placeholder} ${aria}`);
     }
@@ -107,27 +98,27 @@
       const target = event.target.closest?.('a,button,[role="button"],textarea,input,[role="textbox"],[contenteditable]');
       if (!target) return;
 
-      if (!authUser && isAuthAction(target)) {
+      if (isAuthAction(target)) {
         event.preventDefault();
         event.stopImmediatePropagation();
-        window.location.assign('/login');
+        window.location.assign(loginTarget());
         return;
       }
 
-      if (!authUser && (isComposer(target) || isSendAction(target))) {
+      if ((!authUser || !profile) && (isComposer(target) || isSendAction(target))) {
         event.preventDefault();
         event.stopImmediatePropagation();
-        window.location.assign('/login');
+        window.location.assign(loginTarget());
       }
     }, true);
 
     document.addEventListener('keydown', (event) => {
-      if (authUser) return;
+      if (authUser && profile) return;
       if (!isComposer(event.target)) return;
       if (event.key === 'Enter' || event.key.length === 1) {
         event.preventDefault();
         event.stopImmediatePropagation();
-        window.location.assign('/login');
+        window.location.assign(loginTarget());
       }
     }, true);
   </script>
