@@ -6,12 +6,17 @@
   <meta name="theme-color" content="#08111f" />
   <title>ColdChat</title>
   <link rel="stylesheet" href="/assets/index-DtLo_uuG.css" />
+  <style>
+    .message.pinned{background:linear-gradient(90deg,#ffd16612,#ffd16605 48%,transparent);box-shadow:inset 2px 0 0 #ffd16666}
+    .pin-badge{color:#ffd166;border:1px solid #ffd1663d;background:#ffd1660d;border-radius:999px;padding:2px 6px;font-size:7px;font-style:normal;font-weight:900;letter-spacing:.7px}
+    .message-actions button[aria-label="Pin message"],.message-actions button[aria-label="Unpin message"]{font-size:12px}
+  </style>
 </head>
 <body>
   <div id="root"></div>
   <script type="module">
     import { i as reactFactory, t as reactDomClientFactory } from '/assets/framework-CXnKph_e.js';
-    import App from '/assets/chat-shell-BA0J5a0Y.js';
+    import App from '/api/chat-shell';
 
     const React = reactFactory();
     const ReactDOMClient = reactDomClientFactory();
@@ -45,9 +50,6 @@
       console.warn('ColdChat auth check failed', error);
     }
 
-    // Only expose an authenticated user to the recovered frontend after
-    // ColdChat has a complete profile. This prevents the legacy onboarding
-    // modal from opening automatically on the public home page.
     const appAuthUser = authUser && profile ? authUser : null;
 
     ReactDOMClient.hydrateRoot(
