@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#07101f">
+  <meta name="description" content="Sign in to ColdChat.">
+  <title>Sign in — ColdChat</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body class="auth-page">
+  <div class="ambient ambient-one" aria-hidden="true"></div>
+  <main class="auth-layout">
+    <section class="auth-story">
+      <a class="brand" href="/"><span class="brand-mark">C</span><span><strong>ColdChat</strong><small>community space</small></span></a>
+      <div><span class="eyebrow">Conversations, without the noise</span><h1>A calmer place to connect.</h1><p>Join the public room, build your circle and continue conversations privately.</p></div>
+      <div class="auth-features"><span>Public room</span><span>Private messages</span><span>Community moderation</span></div>
+    </section>
+    <section class="auth-card">
+      <a class="back-link" href="/">← Back to conversation</a>
+      <span class="eyebrow">Welcome</span><h2 id="authTitle">Sign in to ColdChat</h2><p id="authIntro">Continue the conversation with your account.</p>
+      <a class="button google-button" href="/standalone/auth/google"><span>G</span> Continue with Google</a>
+      <div class="divider"><span>or use email</span></div>
+      <form id="authForm" class="stack-form">
+        <label>Email<input id="email" name="email" type="email" required autocomplete="email" placeholder="you@example.com"></label>
+        <label>Password<input id="password" name="password" type="password" minlength="8" required autocomplete="current-password" placeholder="At least 8 characters"></label>
+        <p class="form-error" id="authError" role="alert"></p>
+        <button class="button primary" id="authSubmit" type="submit">Sign in</button>
+      </form>
+      <p class="auth-switch"><span id="switchCopy">New here?</span> <button class="text-button" id="switchMode" type="button">Create an account</button></p>
+    </section>
+  </main>
+  <script type="module" src="/login.js"></script>
+</body>
+</html>

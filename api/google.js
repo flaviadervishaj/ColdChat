@@ -1,5 +1,6 @@
-const SUPABASE_URL = 'https://awtayqyiaorglduxnust.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_3p6Piixdq_bu-wF793Z_fQ_PVpZ6uIv';
+const SUPABASE_URL = String(process.env.SUPABASE_URL || '').replace(/\/$/, '');
+const SUPABASE_KEY = String(process.env.SUPABASE_PUBLISHABLE_KEY || '');
+const APP_URL = String(process.env.APP_URL || '').replace(/\/$/, '');
 
 function json(res, status, data) {
   res.statusCode = status;
@@ -9,7 +10,7 @@ function json(res, status, data) {
 }
 
 function setSessionCookies(res, session) {
-  const secure = '; Path=/; HttpOnly; Secure; SameSite=Lax';
+  const secure = `; Path=/; HttpOnly; SameSite=Lax${process.env.NODE_ENV === 'production' ? '; Secure' : ''}`;
   const maxAge = Math.max(60, Number(session.expires_in || 3600));
   res.setHeader('set-cookie', [
     `cc_access=${encodeURIComponent(session.access_token)}; Max-Age=${maxAge}${secure}`,
@@ -26,12 +27,15 @@ async function readJson(req) {
 }
 
 export default async function handler(req, res) {
+  if (!SUPABASE_URL || !SUPABASE_KEY) return json(res, 500, { error: 'Server configuration is incomplete.' });
   const action = String(req.query.action || '');
 
   if (action === 'start' && req.method === 'GET') {
-    const host = req.headers['x-forwarded-host'] || req.headers.host || 'coldchat.vercel.app';
-    const proto = req.headers['x-forwarded-proto'] || 'https';
-    const redirectTo = `${proto}://${host}/login`;
+    const requestHost = req.headers['x-forwarded-host'] || req.headers.host;
+    const requestProto = req.headers['x-forwarded-proto'] || 'https';
+    const origin = APP_URL || (requestHost ? `${requestProto}://${requestHost}` : '');
+    if (!origin) return json(res, 500, { error: 'Application URL is not configured.' });
+    const redirectTo = `${origin}/login`;
     const url = `${SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectTo)}&prompt=select_account`;
     res.statusCode = 302;
     res.setHeader('cache-control', 'private, no-store');
