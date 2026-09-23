@@ -1,13 +1,8 @@
 import { randomUUID } from 'node:crypto';
-import { isUuid, normalizeMessage, validateModerationMinutes, validateUsername } from '../lib/validation.js';
 
-const SUPABASE_URL = String(process.env.SUPABASE_URL || '').replace(/\/$/, '');
-const SUPABASE_KEY = String(process.env.SUPABASE_PUBLISHABLE_KEY || '');
+const SUPABASE_URL = 'https://awtayqyiaorglduxnust.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_3p6Piixdq_bu-wF793Z_fQ_PVpZ6uIv';
 const MEDIA_BUCKET = 'coldchat-media';
-
-function requireConfig() {
-  if (!SUPABASE_URL || !SUPABASE_KEY) throw new Error('Server configuration is incomplete.');
-}
 
 function json(res, status, data) {
   res.statusCode = status;
@@ -30,7 +25,7 @@ function parseCookies(req) {
 }
 
 function setSessionCookies(res, session) {
-  const secure = `; Path=/; HttpOnly; SameSite=Lax${process.env.NODE_ENV === 'production' ? '; Secure' : ''}`;
+  const secure = '; Path=/; HttpOnly; Secure; SameSite=Lax';
   const maxAge = Math.max(60, Number(session.expires_in || 3600));
   res.setHeader('set-cookie', [
     `cc_access=${encodeURIComponent(session.access_token)}; Max-Age=${maxAge}${secure}`,
@@ -99,7 +94,6 @@ async function parseMultipartFile(req, fieldName, maxBytes) {
 }
 
 async function supa(path, { method = 'GET', token, body, headers = {} } = {}) {
-  requireConfig();
   const h = { apikey: SUPABASE_KEY, ...headers };
   if (token) h.authorization = `Bearer ${token}`;
   let payload;
@@ -120,10 +114,7 @@ async function refreshSession(req, res) {
   const r = await supa('/auth/v1/token?grant_type=refresh_token', {
     method: 'POST', body: { refresh_token: cookies.cc_refresh }, headers: { 'content-type': 'application/json' },
   });
-  if (!r.ok) {
-    clearSessionCookies(res);
-    return null;
-  }
+  if (!r.ok) return null;
   const session = await r.json();
   setSessionCookies(res, session);
   return session;
@@ -137,15 +128,9 @@ async function getSession(req, res) {
     if (u.ok) return { access, user: await u.json() };
   }
   const refreshed = await refreshSession(req, res);
-  if (!refreshed?.access_token) {
-    clearSessionCookies(res);
-    return null;
-  }
+  if (!refreshed?.access_token) return null;
   const u = await supa('/auth/v1/user', { token: refreshed.access_token });
-  if (!u.ok) {
-    clearSessionCookies(res);
-    return null;
-  }
+  if (!u.ok) return null;
   return { access: refreshed.access_token, user: await u.json() };
 }
 
@@ -202,6 +187,25 @@ function mapPerson(p, restriction = null) {
     role: p.role || 'member',
     restriction,
   };
+}
+
+function validateUsername(value) {
+  const normalized = String(value || '').normalize('NFKC');
+  if (!normalized || normalized !== normalized.trim()) return 'Do not start or end with a space.';
+  const parts = normalized.split(' ');
+  if (parts.length > 2 || parts.some(x => !x)) return 'Use no spaces, or one before an emoji.';
+  if (Array.from(parts[0]).length < 3) return 'Use at least 3 characters.';
+  if (parts[1]) {
+    const hasEmoji = /\p{Extended_Pictographic}/u.test(parts[1]);
+    const invalid = /[^\p{Extended_Pictographic}\p{Emoji_Modifier}\uFE0F\u200D\u20E3]/u.test(parts[1]);
+    if (!hasEmoji || invalid) return 'After the space, use emoji only.';
+  }
+  if (Array.from(normalized).length > 80) return 'Username is too long.';
+  return null;
+}
+
+function isUuid(v) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(v || ''));
 }
 
 async function ownProfile(session) {
@@ -269,8 +273,6 @@ async function handleAuth(req, res, path) {
     return json(res, 200, { authUser: { id: session.user.id, email: session.user.email } });
   }
   if (path === 'auth/logout' && req.method === 'POST') {
-    const access = parseCookies(req).cc_access;
-    if (access) await supa('/auth/v1/logout', { method: 'POST', token: access }).catch(() => null);
     clearSessionCookies(res);
     return json(res, 200, { ok: true });
   }
@@ -279,8 +281,7 @@ async function handleAuth(req, res, path) {
     const email = String(b.email || '').trim().toLowerCase();
     const password = String(b.password || '');
     const mode = b.mode === 'signup' ? 'signup' : 'signin';
-    const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-    if (!validEmail || password.length < 8) return json(res, 400, { error: 'Enter a valid email and a password with at least 8 characters.' });
+    if (!email || password.length < 6) return json(res, 400, { error: 'Enter a valid email and a password with at least 6 characters.' });
     const endpoint = mode === 'signup' ? '/auth/v1/signup' : '/auth/v1/token?grant_type=password';
     const r = await supa(endpoint, { method: 'POST', body: { email, password }, headers: { 'content-type': 'application/json' } });
     const data = await r.json().catch(() => ({}));
@@ -456,7 +457,7 @@ async function handleMessages(req, res, path) {
     if (block) return json(res, 403, { error: block });
 
     const b = await readJson(req);
-    const text = normalizeMessage(b.text);
+    const text = String(b.text || '').trim().slice(0, 4000);
     const stickerId = Number(b.stickerId || 0) || null;
     const replyToId = b.replyToId ? String(b.replyToId) : null;
     if (!text && !stickerId) return json(res, 400, { error: 'Message is empty.' });
@@ -682,7 +683,7 @@ async function handleDms(req, res, path) {
     if (block) return json(res, 403, { error: block });
     const b = await readJson(req);
     const recipient = Number(b.recipientProfileId || 0);
-    const text = normalizeMessage(b.text);
+    const text = String(b.text || '').trim().slice(0, 4000);
     if (!recipient || recipient === Number(profile.id) || !text) return json(res, 400, { error: 'Message is incomplete.' });
     const pairKey = `${Math.min(Number(profile.id), recipient)}:${Math.max(Number(profile.id), recipient)}`;
     const fr = await rest(`friendships?pair_key=eq.${encodeURIComponent(pairKey)}&status=eq.accepted&select=id`, { token: session.access });
@@ -767,13 +768,11 @@ async function handleModeration(req, res, path) {
       const err = validateUsername(String(b.username || ''));
       if (err) return json(res, 400, { error: err });
     }
-    const minutes = validateModerationMinutes(b.minutes);
-    if (action === 'timeout' && minutes == null) return json(res, 400, { error: 'Choose a timeout from 1 minute to 30 days.' });
     const r = await rpc('coldchat_moderate', {
       p_action: action,
       p_target_profile_id: target,
       p_reason: String(b.reason || '').slice(0, 300),
-      p_minutes: minutes,
+      p_minutes: b.minutes == null ? null : Number(b.minutes),
       p_enabled: b.enabled == null ? null : Boolean(b.enabled),
       p_username: b.username == null ? null : String(b.username).normalize('NFKC'),
     }, session.access);
@@ -789,7 +788,7 @@ export default async function handler(req, res) {
     const rawPath = req.query.path;
     const path = Array.isArray(rawPath) ? rawPath.join('/') : String(rawPath || '').replace(/^\/+/, '');
 
-    if (path === 'health') return json(res, 200, { ok: Boolean(SUPABASE_URL && SUPABASE_KEY), service: 'coldchat', database: 'supabase' });
+    if (path === 'health') return json(res, 200, { ok: true, service: 'coldchat-standalone', database: 'supabase' });
 
     const handlers = [
       handleAuth,
@@ -814,6 +813,6 @@ export default async function handler(req, res) {
     return json(res, 404, { error: 'Standalone endpoint not found.' });
   } catch (e) {
     console.error('ColdChat native error', e);
-    return json(res, 500, { error: 'The server could not complete this request.' });
+    return json(res, 500, { error: e?.message || 'Standalone backend error.' });
   }
 }

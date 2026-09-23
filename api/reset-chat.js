@@ -1,5 +1,5 @@
-const SUPABASE_URL = String(process.env.SUPABASE_URL || '').replace(/\/$/, '');
-const SUPABASE_KEY = String(process.env.SUPABASE_PUBLISHABLE_KEY || '');
+const SUPABASE_URL = 'https://awtayqyiaorglduxnust.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_3p6Piixdq_bu-wF793Z_fQ_PVpZ6uIv';
 
 function json(res, status, data) {
   res.statusCode = status;
@@ -21,7 +21,7 @@ function parseCookies(req) {
 }
 
 function setSessionCookies(res, session) {
-  const secure = `; Path=/; HttpOnly; SameSite=Lax${process.env.NODE_ENV === 'production' ? '; Secure' : ''}`;
+  const secure = '; Path=/; HttpOnly; Secure; SameSite=Lax';
   const maxAge = Math.max(60, Number(session.expires_in || 3600));
   res.setHeader('set-cookie', [
     `cc_access=${encodeURIComponent(session.access_token)}; Max-Age=${maxAge}${secure}`,
@@ -30,7 +30,6 @@ function setSessionCookies(res, session) {
 }
 
 async function supa(path, { method = 'GET', token, body } = {}) {
-  if (!SUPABASE_URL || !SUPABASE_KEY) throw new Error('Server configuration is incomplete.');
   const headers = { apikey: SUPABASE_KEY };
   if (token) headers.authorization = `Bearer ${token}`;
   let payload;
@@ -72,7 +71,6 @@ export default async function handler(req, res) {
 
     return json(res, 200, { ok: true, cleared: Number(data || 0) });
   } catch (e) {
-    console.error('ColdChat reset error', e);
-    return json(res, 500, { error: 'Could not start a new chat.' });
+    return json(res, 500, { error: e?.message || 'Could not start a new chat.' });
   }
 }

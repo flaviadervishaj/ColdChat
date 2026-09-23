@@ -1,10 +1,6 @@
 {
-  "name": "coldchat",
+  "name": "coldchat-proxy",
   "private": true,
   "type": "module",
-  "scripts": {
-    "check": "node --check app.js && node --check login.js && node --check api/native.js && node --check api/google.js && node --check api/reset-chat.js",
-    "test": "node --test"
-  },
-  "engines": { "node": ">=20" }
+  "engines": { "node": ">=18" }
 }

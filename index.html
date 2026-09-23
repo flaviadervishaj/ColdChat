@@ -1,138 +1,347 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="ColdChat is a focused community chat with public rooms, private conversations, reactions and moderation.">
-  <meta name="theme-color" content="#07101f">
-  <title>ColdChat — Community conversations</title>
-  <link rel="stylesheet" href="/styles.css">
-  <script type="module" src="/app.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <meta name="theme-color" content="#040817" />
+  <title>ColdChat</title>
+  <link rel="stylesheet" href="/assets/index-DtLo_uuG.css" />
+  <style>
+    /* Compact, message-first layout */
+    .message{grid-template-columns:28px minmax(0,1fr) 28px;align-items:start;gap:7px;padding:4px 6px;border-radius:10px;transition:background .16s ease,box-shadow .16s ease}
+    .message:hover,.message:focus-within{background:#ffffff08}
+    .message.pinned{position:sticky;top:4px;z-index:12;background:linear-gradient(90deg,#ffd16610,#ffd16605 48%,transparent),#0b1322f4;box-shadow:inset 2px 0 0 #ffd16666,0 8px 24px #0005;-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+    .message-content{position:relative;min-width:0;padding:1px 42px 2px 2px}
+    .message-meta{display:flex;align-items:center;gap:6px;min-width:0;min-height:18px;margin-bottom:1px;line-height:1}
+    .message-username{max-width:58%;font-size:15px;line-height:18px;font-weight:900}
+    .role-badge{align-self:center;line-height:1;padding:2px 5px;font-size:6px;transform:translateY(-.25px)}
+    .role-badge.role-owner{font-size:0}
+    .role-badge.role-owner::after{content:"ADMIN";font-size:6px}
+    .pin-badge{color:#ffd166;border:1px solid #ffd1662e;background:#ffd1660b;border-radius:999px;padding:2px 5px;font-size:6px;font-style:normal;font-weight:850;letter-spacing:.15px;white-space:nowrap}
+    .message-body{display:flex;align-items:flex-start;min-width:0}
+    .message-text{font-size:14px;line-height:1.38;font-weight:600}
+    .message-time{display:block!important;position:absolute;right:1px;bottom:2px;margin:0!important;min-width:36px;color:#718097;text-align:right;font-size:7px;line-height:1;font-variant-numeric:tabular-nums;white-space:nowrap;opacity:.82}
+    .quoted{margin:1px 0 4px;padding:4px 7px}
+    .sticker-message{width:clamp(66px,10vw,88px);height:clamp(66px,10vw,88px);border-radius:12px}
+    .voice-message{margin-top:2px}
+
+    /* Existing reactions are compact chips below the message. */
+    .reactions{gap:3px;margin-top:3px;padding-right:2px}
+    .reactions button{min-height:20px;padding:2px 6px;border-radius:999px;font-size:8px}
+    .reactions b{font-size:6.5px}
+
+    /* One subtle trigger replaces the always-visible reaction/action column. */
+    .message-actions{visibility:visible!important;position:relative;width:28px;min-width:28px;align-self:start;justify-content:center;border:0!important;background:transparent!important;box-shadow:none!important;padding:0!important;opacity:.22;overflow:visible;transition:opacity .15s ease}
+    .message:hover .message-actions,.message:focus-within .message-actions,.message-actions:hover,.message-actions:has(details[open]){opacity:1}
+    .reaction-menu{position:relative;width:24px}
+    .reaction-menu summary{list-style:none;width:24px;height:24px;color:#75839a;border:0;background:transparent;border-radius:7px;display:grid;place-items:center;font-size:15px;line-height:1;cursor:pointer;user-select:none}
+    .reaction-menu summary::-webkit-details-marker{display:none}
+    .reaction-menu summary:hover,.reaction-menu[open] summary{color:#d8e1ee;background:#ffffff0b}
+    .reaction-popover{display:none;position:absolute;right:calc(100% + 5px);top:-3px;z-index:50;align-items:center;gap:2px;padding:3px;border:1px solid #26364b;background:#0d1727f2;-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);border-radius:10px;box-shadow:0 12px 34px #0009;white-space:nowrap}
+    .reaction-menu[open] .reaction-popover{display:flex}
+    .reaction-popover button{width:27px!important;height:27px!important;border:0;border-radius:7px;color:#dce5f1;background:transparent;display:grid;place-items:center;font-size:13px;line-height:1}
+    .reaction-popover button:hover{background:#ffffff10;color:#fff}
+    .reaction-divider{width:1px;height:18px;background:#ffffff16;margin:0 2px}
+
+    /* Composer stays clean and compact. */
+    .composer{border-radius:16px;padding:6px 6px 6px 12px}
+    .composer textarea{font-size:14px;line-height:1.45}
+    .composer-zone{background:#050a1385}
+
+    /* Private chat: focused desktop panel + obvious way back. */
+    .dm-back-button{height:32px;color:#c8d4e3;border:1px solid var(--line);background:#ffffff07;border-radius:9px;display:inline-flex;align-items:center;gap:7px;padding:0 10px;font-size:9px;font-weight:780}
+    .dm-back-button:hover{color:var(--ice);background:#74e9ff0d;border-color:#74e9ff2e}
+    .dm-thread{padding-inline:clamp(16px,3vw,34px)}
+    .dm-intro{margin:18px auto 14px}
+    .dm-bubble{max-width:min(72%,620px);padding:10px 12px 7px}
+    .dm-bubble p{font-size:14.5px;line-height:1.48}
+    .dm-bubble time{font-size:8px;font-variant-numeric:tabular-nums}
+
+    /* Profile modal: compact settings card instead of a large onboarding sheet. */
+    .modal-card:has(.profile-top){width:min(100%,520px);padding:25px 25px 21px;border-radius:22px;overflow:hidden}
+    .modal-card:has(.profile-top) .modal-close{top:12px;right:12px;width:31px;height:31px;border-radius:9px}
+    .modal-card:has(.profile-top) .eyebrow{margin:0 0 5px;font-size:7px;letter-spacing:1.8px}
+    .modal-card:has(.profile-top) h2{max-width:calc(100% - 44px);font-size:22px;line-height:1.08;letter-spacing:-.55px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .modal-card:has(.profile-top) .modal-copy{margin:6px 0 13px;font-size:8px;line-height:1.4}
+    .modal-card:has(.profile-top) .profile-top{display:grid;grid-template-columns:58px minmax(0,1fr);align-items:center;gap:13px;margin:0 0 13px;padding:11px 12px;border:1px solid var(--line);background:#ffffff06;border-radius:15px}
+    .modal-card:has(.profile-top) .avatar-upload{width:58px;align-self:end;position:relative}
+    .modal-card:has(.profile-top) .avatar-upload>img{width:56px;height:56px}
+    .modal-card:has(.profile-top) .avatar-upload>.avatar{position:relative!important;right:auto!important;bottom:auto!important;width:56px!important;height:56px!important;border:1px solid #ffffff21!important;border-radius:50%!important;box-shadow:inset 0 1px #ffffff14!important}
+    .modal-card:has(.profile-top) .avatar-upload>.avatar.avatar-ice{background:linear-gradient(145deg,#2d7891,#163c5d)!important}
+    .modal-card:has(.profile-top) .avatar-upload>.avatar.avatar-coral{background:linear-gradient(145deg,#9a4660,#44253d)!important}
+    .modal-card:has(.profile-top) .avatar-upload>.avatar.avatar-mint{background:linear-gradient(145deg,#267865,#153b3e)!important}
+    .modal-card:has(.profile-top) .avatar-upload>span:not(.avatar){right:-5px;bottom:1px;width:24px;height:24px;border-width:2px;border-radius:8px;z-index:3}
+    .modal-card:has(.profile-top) .colour-field{gap:7px}
+    .modal-card:has(.profile-top) .colour-field>span,.modal-card:has(.profile-top) .profile-field>span{font-size:7.5px;letter-spacing:.1px}
+    .modal-card:has(.profile-top) .colour-grid{display:grid;grid-template-columns:repeat(9,27px);gap:6px;align-items:center}
+    .modal-card:has(.profile-top) .colour-grid>button,.modal-card:has(.profile-top) .custom-colour{width:27px;height:27px;border-radius:9px}
+    .modal-card:has(.profile-top) .profile-field{gap:5px}
+    .modal-card:has(.profile-top) .profile-field input{height:42px;border-radius:11px;padding:0 12px;font-size:10.5px}
+    .modal-card:has(.profile-top) .profile-field input:disabled{background:#ffffff05;color:#8090a6;border-color:#ffffff12}
+    .modal-card:has(.profile-top) .profile-field small{font-size:7px;margin-top:1px}
+    .modal-card:has(.profile-top) .primary-action{height:42px;margin-top:12px;border-radius:11px;font-size:9.5px}
+    .modal-card:has(.profile-top) .privacy-note{margin:7px 0 0;font-size:6.5px;opacity:.72}
+
+    @media (min-width:761px){
+      .conversation-area.private-view{grid-template-columns:minmax(0,920px);justify-content:center}
+      .conversation-area.private-view .chat-card{width:100%;box-shadow:0 28px 90px #00000066}
+    }
+
+    @media (max-width:760px){
+      .message{grid-template-columns:27px minmax(0,1fr) 24px;gap:6px;padding:4px 5px}
+      .message.pinned{top:3px}
+      .message-content{padding:1px 34px 2px 1px}
+      .message-meta{gap:5px;min-height:18px;margin-bottom:0}
+      .message-username{max-width:62%;font-size:15px;line-height:18px}
+      .role-badge{font-size:5.5px;padding:2px 4px}
+      .role-badge.role-owner::after{font-size:5.5px}
+      .pin-badge{font-size:5.5px;padding:2px 4px}
+      .message-text{font-size:14px;line-height:1.36}
+      .message-time{right:0;bottom:2px;min-width:32px;font-size:6.8px}
+      .message-actions{width:24px;min-width:24px;opacity:.28}
+      .reaction-menu,.reaction-menu summary{width:22px}
+      .reaction-menu summary{height:22px;font-size:14px}
+      .reaction-popover{right:calc(100% + 3px);top:-4px;padding:3px}
+      .reaction-popover button{width:29px!important;height:29px!important;font-size:14px}
+      .reactions{margin-top:2px;gap:3px}
+      .reactions button{min-height:19px;padding:2px 5px;font-size:8px}
+      .sticker-message{width:78px;height:78px}
+      .dm-back-button{width:42px;height:42px;padding:0;display:grid;place-items:center;border-radius:11px}
+      .dm-back-button span{display:none}
+      .conversation-area.private-view .chat-card{width:100%;max-width:none}
+      .dm-thread{padding-inline:10px}
+      .dm-intro{margin:14px auto 11px}
+      .dm-bubble{max-width:82%;padding:9px 11px 7px}
+      .composer textarea{font-size:16px}
+
+      .modal-backdrop:has(.profile-top){place-items:end center;padding:10px 10px max(10px,env(safe-area-inset-bottom))}
+      .modal-card:has(.profile-top){width:100%;max-height:78dvh;padding:20px 18px 17px;border-radius:20px;overflow:auto}
+      .modal-card:has(.profile-top) .modal-close{top:10px;right:10px;width:30px;height:30px}
+      .modal-card:has(.profile-top) h2{font-size:20px;max-width:calc(100% - 40px)}
+      .modal-card:has(.profile-top) .modal-copy{margin:5px 0 11px}
+      .modal-card:has(.profile-top) .profile-top{grid-template-columns:50px minmax(0,1fr);gap:11px;padding:10px;margin-bottom:11px;border-radius:14px}
+      .modal-card:has(.profile-top) .avatar-upload{width:50px;align-self:end}
+      .modal-card:has(.profile-top) .avatar-upload>img{width:48px;height:48px}
+      .modal-card:has(.profile-top) .avatar-upload>.avatar{width:48px!important;height:48px!important}
+      .modal-card:has(.profile-top) .avatar-upload>span:not(.avatar){width:22px;height:22px;right:-5px;bottom:1px}
+      .modal-card:has(.profile-top) .colour-grid{grid-template-columns:repeat(9,25px);gap:5px}
+      .modal-card:has(.profile-top) .colour-grid>button,.modal-card:has(.profile-top) .custom-colour{width:25px;height:25px;border-radius:8px}
+      .modal-card:has(.profile-top) .profile-field input{height:40px;font-size:10px}
+      .modal-card:has(.profile-top) .primary-action{height:40px;margin-top:10px}
+      .modal-card:has(.profile-top) .privacy-note{display:none}
+    }
+
+    /* Concept C colour theme: same layout, new ColdChat identity. */
+    :root{
+      --bg:#030711;
+      --panel:#071225;
+      --panel-soft:#09162be8;
+      --line:#5ee8ff24;
+      --line-strong:#6fecff66;
+      --text:#f4f7ff;
+      --muted:#8c98b6;
+      --ice:#57ecff;
+      --coral:#ff4fc3;
+      --mint:#5ff3d0;
+      --violet:#965cff;
+      --magenta:#ff43ca;
+    }
+    body{background:#030711;color:var(--text)}
+    .cold-app{background:radial-gradient(circle at 16% -8%,#00defd1f 0,#0000 34%),radial-gradient(circle at 88% 10%,#9c44ff22 0,#0000 32%),radial-gradient(circle at 72% 112%,#ff35c31b 0,#0000 35%),linear-gradient(145deg,#030711,#071025 54%,#08091a)}
+    .cold-app:before{opacity:.22;background-image:linear-gradient(#65e8ff05 1px,#0000 1px),linear-gradient(90deg,#a467ff05 1px,#0000 1px)}
+    .aurora{opacity:.22;filter:blur(125px)}
+    .aurora-a{background:#00e8ff}
+    .aurora-b{background:#bb37ff}
+    .topbar{background:#040918d9;border-color:#69eaff22;box-shadow:0 10px 40px #0005}
+    .menu-button,.account-chip,.global-search,.live-toggle,.round-control,.dm-back-button{background:#ffffff07;border-color:#6feaff22;color:#c4cee3}
+    .menu-button:hover,.account-chip:hover,.live-toggle:hover,.round-control:hover,.dm-back-button:hover{background:#60eaff0b;border-color:#7d6cff3f;color:#eefaff}
+    .menu-button>i{background:linear-gradient(135deg,#ff43ca,#8f5cff);border-color:#071020;box-shadow:0 0 18px #ff43ca55}
+    .brand{color:#eef7ff;text-shadow:0 0 18px #4ae8ff14}
+    .brand>span:last-child{color:#dbe4ff;font-weight:600}
+    .brand b{color:#59efff;font-weight:900;text-shadow:0 0 16px #31e5ff66}
+    .brand-mark{color:#f7fbff;background:linear-gradient(145deg,#00e7f7 0%,#4b7cff 48%,#bd3dff 100%);border-color:#9af4ff99;box-shadow:0 0 0 1px #6c4fff33,0 8px 28px #00dfff3d,0 0 24px #b23cff28}
+    .global-search:focus-within{background:#ffffff0a;border-color:#61eaff66;box-shadow:0 0 0 3px #43e8ff0b}
+    .global-search input::placeholder{color:#73809d}
+    .global-search kbd{color:#8997b4;border-color:#776bff2c;background:#ffffff05}
+    .signal{color:#ff8ddd}
+    .signal i,.live-badge i{background:#ff43ca;box-shadow:0 0 0 5px #ff43ca18,0 0 15px #ff43ca88}
+    .join-button,.primary-action{color:#030817;background:linear-gradient(135deg,#4ef0ff 0%,#6977ff 52%,#d53cff 100%);border-color:#b8f8ff80;box-shadow:0 10px 30px #5b6dff35,0 0 24px #c13cff20}
+    .join-button:hover,.primary-action:hover{filter:brightness(1.08);box-shadow:0 12px 34px #4eeaff42,0 0 28px #c43eff2b}
+    .live-stage,.chat-card{border-color:#5ce8ff22;background:var(--panel-soft);box-shadow:0 24px 70px #0008,0 0 35px #3a47ff0b}
+    .chat-card{background:linear-gradient(180deg,#09162bf5,#050b18f8)}
+    .chat-header{border-color:#6576ff22}
+    .public-symbol{color:#72f2ff;background:linear-gradient(145deg,#2ee9ff16,#9a4cff16);border-color:#68e9ff36;box-shadow:inset 0 0 18px #55eaff08}
+    .welcome-line{color:#9cf7ff;background:linear-gradient(90deg,#36e9ff0b,#974bff0b);border-color:#66e9ff20}
+    .message:hover,.message:focus-within{background:linear-gradient(90deg,#41e8ff07,#9e4cff06)}
+    .message.pinned{background:linear-gradient(90deg,#a34cff18,#ff43c90e 48%,#06101ef2),#071125f5;box-shadow:inset 2px 0 0 #be5cff99,0 8px 26px #0007,0 0 22px #9f4cff0d}
+    .pin-badge{color:#d5a8ff;border-color:#b75cff38;background:#9f4cff12}
+    .role-badge.role-owner{color:#63efff!important;border-color:#61eaff3d!important;background:#4de8ff10!important;box-shadow:0 0 12px #4ee8ff12}
+    .message-time,.dm-bubble time{color:#7886a5}
+    .reaction-menu summary{color:#7e8aaa}
+    .reaction-menu summary:hover,.reaction-menu[open] summary{color:#74efff;background:#68eaff0c}
+    .reaction-popover{background:#071126f5;border-color:#755fff45;box-shadow:0 14px 38px #000a,0 0 28px #864cff18}
+    .reaction-popover button:hover,.reactions button:hover{background:linear-gradient(145deg,#44eaff14,#aa4dff16)}
+    .reactions button{border-color:#6be8ff20;background:#ffffff06}
+    .composer-zone{background:#030814b8;border-color:#675eff1f}
+    .composer{background:linear-gradient(145deg,#ffffff06,#7d51ff06);border-color:#62eaff25}
+    .composer:focus-within{border-color:#65eaff55;box-shadow:0 0 0 3px #56eaff09,0 0 24px #a64cff0d}
+    .dm-bubble{border-color:#6ceaff1c;background:linear-gradient(145deg,#0b1830,#0a1022)}
+    .dm-bubble.mine{background:linear-gradient(145deg,#12324a,#24184d);border-color:#7d68ff38}
+    .dm-back-button:hover{color:#77efff;background:#65eaff0b;border-color:#7668ff42}
+    .modal-backdrop{background:#01040bc7}
+    .modal-card,.modal-card:has(.profile-top){background:radial-gradient(circle at 12% 0%,#24e9ff0f,#0000 35%),radial-gradient(circle at 100% 8%,#a946ff16,#0000 38%),linear-gradient(160deg,#09162cf8,#070d1cf8)!important;border-color:#6ceaff2a!important;box-shadow:0 28px 90px #000b,0 0 42px #824bff18!important}
+    .modal-card:has(.profile-top) .profile-top{background:linear-gradient(145deg,#ffffff07,#8b4cff08);border-color:#6deaff22}
+    .modal-card:has(.profile-top) .profile-field input{background:#030a19b8;border-color:#6b79ff26;color:#eaf3ff}
+    .modal-card:has(.profile-top) .profile-field input:disabled{background:#050b18;color:#8491ad;border-color:#5867a524}
+    .modal-card:has(.profile-top) .eyebrow{color:#6eedff}
+    .modal-card:has(.profile-top) .modal-close{background:#ffffff06;border-color:#7b68ff2a;color:#b7c3dc}
+    .modal-card:has(.profile-top) .avatar-upload>.avatar.avatar-ice{background:linear-gradient(145deg,#007f9f,#222a77 58%,#672d91)!important;box-shadow:0 0 22px #23e5ff25!important}
+    .modal-card:has(.profile-top) .avatar-upload>.avatar.avatar-coral{background:linear-gradient(145deg,#a43177,#5b245f 52%,#37206e)!important}
+    .modal-card:has(.profile-top) .avatar-upload>.avatar.avatar-mint{background:linear-gradient(145deg,#0c907b,#146c7d 55%,#313b8a)!important}
+    .modal-card:has(.profile-top) .avatar-upload>span:not(.avatar){background:linear-gradient(145deg,#4cefff,#875cff)!important;border-color:#07101f!important;color:#06101e!important;box-shadow:0 0 14px #5eeaff38}
+    ::selection{background:#9e4cff55;color:#fff}
+  </style>
 </head>
 <body>
-  <div class="ambient ambient-one" aria-hidden="true"></div>
-  <div class="ambient ambient-two" aria-hidden="true"></div>
+  <div id="root"></div>
+  <script type="module">
+    import { i as reactFactory, t as reactDomClientFactory } from '/assets/framework-CXnKph_e.js';
+    import App from '/coldchat-ui.js?v=20260822-profile-pin-fix-3';
 
-  <div class="app-shell">
-    <aside class="sidebar" id="sidebar">
-      <a class="brand" href="/" aria-label="ColdChat home">
-        <span class="brand-mark">C</span>
-        <span><strong>ColdChat</strong><small>community space</small></span>
-      </a>
+    const React = reactFactory();
+    const ReactDOMClient = reactDomClientFactory();
+    const root = document.getElementById('root');
+    const BRIDGE_KEY = 'coldchat_session_bridge';
 
-      <nav class="primary-nav" aria-label="Main navigation">
-        <button class="nav-item active" id="publicNav" type="button">
-          <span class="nav-icon">#</span><span>Public room</span>
-        </button>
-        <button class="nav-item" id="friendsNav" type="button">
-          <span class="nav-icon">◎</span><span>People</span><span class="badge" id="requestBadge" hidden>0</span>
-        </button>
-        <button class="nav-item" id="moderationNav" type="button" hidden>
-          <span class="nav-icon">◇</span><span>Moderation</span>
-        </button>
-      </nav>
+    let authUser = null;
+    let profile = null;
 
-      <div class="sidebar-note">
-        <span class="live-dot"></span>
-        <div><strong>Live room</strong><small>Messages refresh automatically</small></div>
-      </div>
+    function readBridge() {
+      try { return JSON.parse(localStorage.getItem(BRIDGE_KEY) || 'null'); }
+      catch { return null; }
+    }
 
-      <div class="account-card" id="accountCard">
-        <div class="avatar small" id="accountAvatar">?</div>
-        <div class="account-copy"><strong id="accountName">Guest</strong><small id="accountRole">Read-only access</small></div>
-        <button class="icon-button" id="accountMenu" type="button" aria-label="Open account settings">•••</button>
-      </div>
-    </aside>
+    function persistBrowserCookies(bridge) {
+      if (!bridge?.access_token || !bridge?.refresh_token) return;
+      const accessAge = Math.max(60, Number(bridge.expires_in || 3600));
+      document.cookie = `cc_access=${encodeURIComponent(bridge.access_token)}; Path=/; Max-Age=${accessAge}; Secure; SameSite=Lax`;
+      document.cookie = `cc_refresh=${encodeURIComponent(bridge.refresh_token)}; Path=/; Max-Age=2592000; Secure; SameSite=Lax`;
+    }
 
-    <main class="chat-panel">
-      <header class="chat-header">
-        <button class="icon-button mobile-only" id="menuButton" type="button" aria-label="Open navigation">☰</button>
-        <div class="channel-heading">
-          <span class="channel-symbol" id="channelSymbol">#</span>
-          <div><h1 id="channelTitle">Public room</h1><p id="channelSubtitle">A shared place for everyone</p></div>
-        </div>
-        <div class="header-actions">
-          <span class="connection-state" id="connectionState"><span></span>Connecting</span>
-          <button class="button secondary compact" id="loginButton" type="button">Sign in</button>
-        </div>
-      </header>
+    async function restoreSessionBridge() {
+      const bridge = readBridge();
+      if (!bridge?.access_token || !bridge?.refresh_token) return;
+      persistBrowserCookies(bridge);
+      try {
+        const r = await fetch('/standalone/auth/session', {
+          method: 'POST',
+          credentials: 'include',
+          cache: 'no-store',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(bridge)
+        });
+        if (!r.ok) localStorage.removeItem(BRIDGE_KEY);
+      } catch {}
+    }
 
-      <section class="messages" id="messages" aria-live="polite" aria-label="Messages">
-        <div class="loading-state"><span class="spinner"></span><p>Loading the conversation…</p></div>
-      </section>
+    await restoreSessionBridge();
 
-      <footer class="composer-wrap">
-        <div class="reply-preview" id="replyPreview" hidden>
-          <div><span>Replying to <strong id="replyName"></strong></span><p id="replyText"></p></div>
-          <button class="icon-button" id="cancelReply" type="button" aria-label="Cancel reply">×</button>
-        </div>
-        <form class="composer" id="composer">
-          <button class="composer-button" id="stickerButton" type="button" aria-label="Choose a sticker">☺</button>
-          <label class="sr-only" for="messageInput">Message</label>
-          <textarea id="messageInput" rows="1" maxlength="4000" placeholder="Sign in to join the conversation" disabled></textarea>
-          <button class="composer-button" id="voiceButton" type="button" aria-label="Record a voice message" disabled>◉</button>
-          <button class="send-button" id="sendButton" type="submit" disabled aria-label="Send message">↑</button>
-        </form>
-        <p class="composer-hint"><span id="composerHint">You can browse without an account.</span><span id="characterCount">0 / 4000</span></p>
-        <div class="sticker-panel" id="stickerPanel" hidden>
-          <div class="popover-heading"><strong>Stickers</strong><button class="text-button" id="uploadStickerButton" type="button">Upload</button></div>
-          <div class="sticker-grid" id="stickerGrid"></div>
-          <input id="stickerUpload" type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden>
-        </div>
-      </footer>
-    </main>
+    try {
+      const response = await fetch('/standalone/auth/me', {
+        credentials: 'include',
+        cache: 'no-store'
+      });
 
-    <aside class="people-panel">
-      <div class="panel-heading"><div><span class="eyebrow">Room activity</span><h2>Online now</h2></div><span class="online-count" id="onlineCount">0</span></div>
-      <div class="people-list" id="onlinePeople"><p class="empty-copy">No one is visible yet.</p></div>
-      <div class="room-guide">
-        <span>Community guide</span>
-        <h3>Keep it thoughtful.</h3>
-        <p>Be kind, protect personal information and make space for every voice.</p>
-      </div>
-    </aside>
-  </div>
+      if (response.ok) {
+        const data = await response.json();
+        authUser = data.authUser || null;
+      }
 
-  <div class="scrim" id="scrim" hidden></div>
+      if (authUser) {
+        const profileResponse = await fetch('/standalone/profile', {
+          credentials: 'include',
+          cache: 'no-store'
+        });
+        if (profileResponse.ok) {
+          const data = await profileResponse.json();
+          profile = data.profile || null;
+        }
+      }
+    } catch (error) {
+      console.warn('ColdChat auth check failed', error);
+    }
 
-  <dialog id="profileDialog" class="dialog-card">
-    <form method="dialog" class="dialog-close-row"><button class="icon-button" aria-label="Close">×</button></form>
-    <span class="eyebrow">Your identity</span>
-    <h2 id="profileDialogTitle">Complete your profile</h2>
-    <p class="dialog-intro">Choose how your name appears in the community.</p>
-    <form id="profileForm" class="stack-form">
-      <label>Display name<input id="profileUsername" name="username" minlength="3" maxlength="80" required autocomplete="nickname"></label>
-      <label>Accent color<input id="profileColor" name="color" type="color" value="#74e9ff"></label>
-      <label class="file-field">Profile image <span>PNG, JPEG or WebP · max 5 MB</span><input id="avatarUpload" type="file" accept="image/png,image/jpeg,image/webp"></label>
-      <p class="form-error" id="profileError" role="alert"></p>
-      <button class="button primary" type="submit">Save profile</button>
-    </form>
-  </dialog>
+    const appAuthUser = authUser && profile ? authUser : null;
 
-  <dialog id="accountDialog" class="dialog-card compact-dialog">
-    <form method="dialog" class="dialog-close-row"><button class="icon-button" aria-label="Close">×</button></form>
-    <span class="eyebrow">Account</span><h2 id="accountDialogName">Guest</h2>
-    <p class="dialog-intro" id="accountDialogEmail">Sign in to participate.</p>
-    <div class="dialog-actions">
-      <a class="button primary" id="accountSignIn" href="/login">Sign in</a>
-      <button class="button secondary" id="editProfileButton" type="button" hidden>Edit profile</button>
-      <button class="button danger" id="logoutButton" type="button" hidden>Sign out</button>
-    </div>
-  </dialog>
+    ReactDOMClient.hydrateRoot(
+      root,
+      React.createElement(App, { authUser: appAuthUser })
+    );
 
-  <dialog id="peopleDialog" class="dialog-card wide-dialog">
-    <form method="dialog" class="dialog-close-row"><button class="icon-button" aria-label="Close">×</button></form>
-    <span class="eyebrow">Connections</span><h2>People</h2>
-    <div id="peopleContent" class="people-sections"><p class="empty-copy">Sign in to connect with people.</p></div>
-  </dialog>
+    const loginTarget = () => authUser && !profile ? '/login?setup=1' : '/login';
 
-  <dialog id="moderationDialog" class="dialog-card wide-dialog">
-    <form method="dialog" class="dialog-close-row"><button class="icon-button" aria-label="Close">×</button></form>
-    <span class="eyebrow">Community safety</span><h2>Moderation</h2>
-    <div id="moderationContent" class="moderation-list"></div>
-    <button class="button danger subtle" id="resetChatButton" type="button">Clear public conversation</button>
-  </dialog>
+    function textOf(el) {
+      return (el?.textContent || '').replace(/\s+/g, ' ').trim();
+    }
 
-  <div class="toast" id="toast" role="status" hidden></div>
+    function isAuthAction(el) {
+      const href = el?.getAttribute?.('href') || '';
+      const text = textOf(el);
+      return /signin-with-chatgpt|chatgpt\.com|\/auth\/login/i.test(href) ||
+             /^(sign in|log in|join|create account)$/i.test(text);
+    }
+
+    function isComposer(el) {
+      if (!el) return false;
+      const tag = (el.tagName || '').toLowerCase();
+      const role = (el.getAttribute?.('role') || '').toLowerCase();
+      const placeholder = (el.getAttribute?.('placeholder') || '').toLowerCase();
+      const aria = (el.getAttribute?.('aria-label') || '').toLowerCase();
+      const editable = el.getAttribute?.('contenteditable') === 'true';
+
+      const textInput = tag === 'textarea' ||
+        (tag === 'input' && (!el.type || ['text', 'search'].includes(el.type))) ||
+        role === 'textbox' || editable;
+
+      if (!textInput) return false;
+      return tag === 'textarea' || editable || /message|chat|write|type|reply/.test(`${placeholder} ${aria}`);
+    }
+
+    function isSendAction(el) {
+      if (!el) return false;
+      const text = textOf(el).toLowerCase();
+      const aria = (el.getAttribute?.('aria-label') || '').toLowerCase();
+      const title = (el.getAttribute?.('title') || '').toLowerCase();
+      return /^(send|post)$/.test(text) || /send message|post message/.test(`${aria} ${title}`);
+    }
+
+    document.addEventListener('click', (event) => {
+      const target = event.target.closest?.('a,button,[role="button"],textarea,input,[role="textbox"],[contenteditable]');
+      if (!target) return;
+
+      if (isAuthAction(target)) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        window.location.assign(loginTarget());
+        return;
+      }
+
+      if ((!authUser || !profile) && (isComposer(target) || isSendAction(target))) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        window.location.assign(loginTarget());
+      }
+    }, true);
+
+    document.addEventListener('keydown', (event) => {
+      if (authUser && profile) return;
+      if (!isComposer(event.target)) return;
+      if (event.key === 'Enter' || event.key.length === 1) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        window.location.assign(loginTarget());
+      }
+    }, true);
+  </script>
 </body>
 </html>

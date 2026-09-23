@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>ColdChat Auth Check</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;min-height:100vh;background:#071018;color:#f5f8ff;font-family:Inter,system-ui,sans-serif;padding:24px}.wrap{max-width:560px;margin:0 auto}.card{background:#0d1822;border:1px solid #213341;border-radius:20px;padding:22px;margin-top:18px}.row{display:flex;justify-content:space-between;gap:20px;padding:11px 0;border-bottom:1px solid #1d2d38}.row:last-child{border-bottom:0}.ok{color:#68f3c0}.bad{color:#ff8f9f}.wait{color:#ffd166}.btn{display:block;width:100%;text-align:center;text-decoration:none;border:0;border-radius:13px;padding:14px;background:#74e9ff;color:#05212a;font-weight:800;font-size:15px;cursor:pointer;margin-top:16px}.muted{color:#91a7b7;line-height:1.5;font-size:14px}.small{font-size:12px;color:#7990a0;margin-top:12px}.hidden{display:none}.result{font-weight:800}.back{color:#9fb2c2;text-decoration:none;display:inline-block;margin-top:18px}
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <h1>ColdChat Auth Check</h1>
+    <p class="muted">This page only checks whether each login step works. It never displays your email or authentication tokens.</p>
+    <a id="start" class="btn" href="/api/google-debug">Test Google login</a>
+
+    <section class="card">
+      <div class="row"><span>1. Google returned to ColdChat</span><span id="oauth" class="result wait">WAITING</span></div>
+      <div class="row"><span>2. OAuth tokens received</span><span id="tokens" class="result wait">WAITING</span></div>
+      <div class="row"><span>3. ColdChat session saved</span><span id="session" class="result wait">WAITING</span></div>
+      <div class="row"><span>4. /auth/me recognizes user</span><span id="me" class="result wait">WAITING</span></div>
+      <div class="row"><span>5. Profile found</span><span id="profile" class="result wait">WAITING</span></div>
+    </section>
+
+    <p id="note" class="small">Press “Test Google login”, choose your account, and this page will fill in automatically.</p>
+    <a class="back" href="/">← Back to ColdChat</a>
+  </main>
+<script>
+const $=id=>document.getElementById(id);
+function set(id,ok,label){const el=$(id);el.textContent=label||(ok?'OK':'FAIL');el.className='result '+(ok?'ok':'bad');}
+async function run(){
+  const hash=new URLSearchParams(location.hash.slice(1));
+  const query=new URLSearchParams(location.search);
+  const hasReturn=location.hash.length>1||location.search.length>1;
+  if(!hasReturn)return;
+  $('start').classList.add('hidden');
+  set('oauth',true,'OK');
+
+  const error=hash.get('error_description')||hash.get('error')||query.get('error_description')||query.get('error');
+  if(error){set('tokens',false,'FAIL');set('session',false,'NOT RUN');set('me',false,'NOT RUN');set('profile',false,'NOT RUN');$('note').textContent='Google returned an OAuth error. Send me a screenshot of this page.';return;}
+
+  const access_token=hash.get('access_token');
+  const refresh_token=hash.get('refresh_token');
+  const code=query.get('code');
+  const implicit=Boolean(access_token&&refresh_token);
+  set('tokens',implicit,implicit?'OK':(code?'CODE ONLY':'FAIL'));
+
+  if(!implicit){
+    set('session',false,'NOT SAVED');set('me',false,'NOT RUN');set('profile',false,'NOT RUN');
+    $('note').textContent=code?'Important: Supabase returned a PKCE code instead of tokens. This identifies the auth-flow mismatch.':'No OAuth tokens were returned. Send me a screenshot of this page.';
+    return;
+  }
+
+  try{
+    const sr=await fetch('/standalone/auth/session',{method:'POST',credentials:'include',cache:'no-store',headers:{'content-type':'application/json'},body:JSON.stringify({access_token,refresh_token,expires_in:Number(hash.get('expires_in')||3600)})});
+    set('session',sr.ok,sr.ok?'OK':`FAIL ${sr.status}`);
+    if(!sr.ok){set('me',false,'NOT RUN');set('profile',false,'NOT RUN');$('note').textContent='ColdChat received the Google tokens but failed while saving the app session.';return;}
+
+    const mr=await fetch('/standalone/auth/me',{credentials:'include',cache:'no-store'});
+    const md=await mr.json().catch(()=>({}));
+    const meOk=mr.ok&&Boolean(md.authUser);
+    set('me',meOk,meOk?'OK':`FAIL ${mr.status}`);
+    if(!meOk){set('profile',false,'NOT RUN');$('note').textContent='The session-save call succeeded, but the next request could not see the session. This confirms a cookie/session persistence problem.';return;}
+
+    const pr=await fetch('/standalone/profile',{credentials:'include',cache:'no-store'});
+    const pd=await pr.json().catch(()=>({}));
+    const profileOk=pr.ok&&Boolean(pd.profile);
+    set('profile',profileOk,profileOk?'OK':'MISSING');
+    $('note').textContent=profileOk?'All five auth steps work. The remaining bug is in the chat UI state, not Google login.':'Authentication works, but ColdChat did not find a linked profile.';
+    history.replaceState(null,'','/auth-debug.html');
+  }catch(e){
+    $('note').textContent='A browser/network error interrupted the diagnostic. Send me a screenshot of this page.';
+  }
+}
+run();
+</script>
+</body>
+</html>
