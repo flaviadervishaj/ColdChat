@@ -1,5 +1,5 @@
 # ColdChat
 
-Vercel proxy deployment for the existing ColdChat site.
+A single-room chat interface deployed on Vercel. Serverless routes provide authentication and proxy chat requests to the existing service.
 
-Redeploy trigger: 2026-08-22.
+The site is available at [coldchat.vercel.app](https://coldchat.vercel.app/).
